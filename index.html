@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XO VR</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #030306;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      .a-loader-title {
+        color: #f1e8df;
+      }
+    </style>
+    <script type="module">
+      import "aframe";
+
+      const SOCIAL_LINKS = [
+        { name: "Instagram", short: "IG", url: "https://instagram.com", angle: 0 },
+        { name: "TikTok", short: "TT", url: "https://tiktok.com", angle: 90 },
+        { name: "YouTube", short: "YT", url: "https://youtube.com", angle: 190 },
+        { name: "Website", short: "XO", url: "https://example.com", angle: 285 },
+      ];
+
+      const PROJECT_OBJECTS = [
+        {
+          name: "Tower",
+          geometry: "primitive: box; width: 0.9; height: 3.9; depth: 0.75",
+          position: "-4.3 1.95 -2.8",
+          rotation: "0 18 0",
+          color: "#141920",
+          emissive: "#273042",
+          accent: "#9fa8b8",
+          hoverColor: "#252f3f",
+          scale: "1 1 1",
+        },
+        {
+          name: "Prism",
+          geometry: "primitive: tetrahedron; radius: 1.25",
+          position: "3.5 1.22 -4.2",
+          rotation: "16 -34 22",
+          color: "#241b27",
+          emissive: "#4b223f",
+          accent: "#e2a0d2",
+          hoverColor: "#3a2642",
+          scale: "1.2 0.95 1.35",
+        },
+        {
+          name: "Slab",
+          geometry: "primitive: box; width: 2.9; height: 0.55; depth: 1.45",
+          position: "-2.8 0.95 3.6",
+          rotation: "0 -28 8",
+          color: "#17201d",
+          emissive: "#203d34",
+          accent: "#8bc6b1",
+          hoverColor: "#23362f",
+          scale: "1 1 1",
+        },
+        {
+          name: "Cone",
+          geometry: "primitive: cone; radiusBottom: 0.85; radiusTop: 0.18; height: 3; segmentsRadial: 5",
+          position: "4.75 1.45 1.35",
+          rotation: "0 42 -17",
+          color: "#23211a",
+          emissive: "#4a4021",
+          accent: "#d6bd72",
+          hoverColor: "#3b351f",
+          scale: "1.05 1 0.9",
+        },
+        {
+          name: "Cylinder",
+          geometry: "primitive: cylinder; radius: 0.9; height: 1.8; segmentsRadial: 4",
+          position: "4.6 1.1 4.35",
+          rotation: "0 45 0",
+          color: "#151822",
+          emissive: "#23304e",
+          accent: "#7ca7ff",
+          hoverColor: "#222b43",
+          scale: "1 1.08 1",
+        },
+      ];
+
+      const setMaterial = (el, values) => {
+        const current = el.getAttribute("material") || {};
+        el.setAttribute("material", { ...current, ...values });
+      };
+
+      const vectorToString = (vector) => `${vector.x} ${vector.y} ${vector.z}`;
+
+      AFRAME.registerComponent("billboard", {
+        tick() {
+          const camera = this.el.sceneEl.camera;
+          if (camera) this.el.object3D.lookAt(camera.el.object3D.getWorldPosition(new THREE.Vector3()));
+        },
+      });
+
+      AFRAME.registerComponent("interactive-surface", {
+        schema: {
+          label: { default: "" },
+          hoverColor: { default: "#ffffff" },
+          emissive: { default: "#ffffff" },
+          hoverScale: { default: 1.12 },
+        },
+        init() {
+          this.homeScale = this.el.object3D.scale.clone();
+          this.homeRotation = this.el.object3D.rotation.clone();
+          this.baseMaterial = { ...(this.el.getAttribute("material") || {}) };
+
+          this.label = document.createElement("a-text");
+          this.label.setAttribute("value", this.data.label);
+          this.label.setAttribute("align", "center");
+          this.label.setAttribute("width", "4.5");
+          this.label.setAttribute("color", "#f3eee7");
+          this.label.setAttribute("position", "0 1.65 0");
+          this.label.setAttribute("visible", "false");
+          this.label.setAttribute("billboard", "");
+          this.el.appendChild(this.label);
+
+          this.el.addEventListener("mouseenter", () => this.activate());
+          this.el.addEventListener("mouseleave", () => this.deactivate());
+        },
+        activate() {
+          this.label.setAttribute("visible", "true");
+          setMaterial(this.el, {
+            color: this.data.hoverColor,
+            emissive: this.data.emissive,
+            emissiveIntensity: 0.72,
+          });
+          this.el.object3D.scale.copy(this.homeScale).multiplyScalar(this.data.hoverScale);
+          this.el.object3D.rotation.y = this.homeRotation.y + THREE.MathUtils.degToRad(9);
+        },
+        deactivate() {
+          this.label.setAttribute("visible", "false");
+          setMaterial(this.el, this.baseMaterial);
+          this.el.object3D.scale.copy(this.homeScale);
+          this.el.object3D.rotation.copy(this.homeRotation);
+        },
+      });
+
+      AFRAME.registerComponent("heartbeat-core", {
+        init() {
+          this.socialOrbit = document.querySelector("#social-orbit");
+          this.el.addEventListener("mouseenter", () => this.setActive(true));
+          this.el.addEventListener("mouseleave", () => this.setActive(false));
+        },
+        setActive(active) {
+          this.socialOrbit.setAttribute("visible", active);
+          this.socialOrbit.setAttribute("animation__fade", {
+            property: "scale",
+            to: active ? "1 1 1" : "0.001 0.001 0.001",
+            dur: 260,
+            easing: "easeOutQuad",
+          });
+          setMaterial(this.el, {
+            emissiveIntensity: active ? 1.75 : 1.05,
+            color: active ? "#ff2f35" : "#b40712",
+          });
+        },
+      });
+
+      AFRAME.registerComponent("orbit", {
+        schema: { speed: { default: 8 } },
+        tick(time, delta) {
+          this.el.object3D.rotation.y += THREE.MathUtils.degToRad(this.data.speed) * (delta / 1000);
+        },
+      });
+
+      AFRAME.registerComponent("secret-sphere", {
+        init() {
+          this.baseScale = this.el.object3D.scale.clone();
+          this.baseMaterial = { ...(this.el.getAttribute("material") || {}) };
+          this.el.addEventListener("mouseenter", () => this.setActive(true));
+          this.el.addEventListener("mouseleave", () => this.setActive(false));
+        },
+        tick() {
+          const camera = this.el.sceneEl.camera;
+          if (!camera) return;
+
+          const cameraPosition = camera.el.object3D.getWorldPosition(new THREE.Vector3());
+          const spherePosition = this.el.object3D.getWorldPosition(new THREE.Vector3());
+          const nearby = cameraPosition.distanceTo(spherePosition) < 3.2;
+          if (nearby !== this.nearby) {
+            this.nearby = nearby;
+            this.setActive(nearby);
+          }
+        },
+        setActive(active) {
+          this.el.object3D.scale.copy(this.baseScale).multiplyScalar(active ? 1.16 : 1);
+          setMaterial(this.el, {
+            ...this.baseMaterial,
+            emissiveIntensity: active ? 1.55 : 0.9,
+          });
+        },
+      });
+
+      const createSocialLinks = () => {
+        const orbit = document.querySelector("#social-orbit");
+        SOCIAL_LINKS.forEach((link) => {
+          const angle = THREE.MathUtils.degToRad(link.angle);
+          const radius = 2.3;
+          const x = Math.cos(angle) * radius;
+          const z = Math.sin(angle) * radius;
+
+          const group = document.createElement("a-entity");
+          group.setAttribute("class", "interactive");
+          group.setAttribute("position", `${x} 0 ${z}`);
+          group.setAttribute("billboard", "");
+
+          const halo = document.createElement("a-ring");
+          halo.setAttribute("radius-inner", "0.31");
+          halo.setAttribute("radius-outer", "0.34");
+          halo.setAttribute("color", "#ff8a8a");
+          halo.setAttribute("material", "shader: flat; opacity: 0.65; transparent: true");
+
+          const text = document.createElement("a-text");
+          text.setAttribute("value", link.short);
+          text.setAttribute("align", "center");
+          text.setAttribute("width", "2.2");
+          text.setAttribute("color", "#fff2eb");
+          text.setAttribute("position", "0 -0.055 0.01");
+          text.setAttribute("data-url", link.url);
+          text.setAttribute("title", link.name);
+
+          group.addEventListener("click", () => window.open(link.url, "_blank", "noopener"));
+          group.append(halo, text);
+          orbit.appendChild(group);
+        });
+      };
+
+      const createProjectObjects = () => {
+        const projectRoot = document.querySelector("#project-objects");
+        PROJECT_OBJECTS.forEach((project) => {
+          const object = document.createElement("a-entity");
+          object.setAttribute("class", "interactive");
+          object.setAttribute("geometry", project.geometry);
+          object.setAttribute("position", project.position);
+          object.setAttribute("rotation", project.rotation);
+          object.setAttribute("scale", project.scale);
+          object.setAttribute("material", {
+            color: project.color,
+            emissive: project.emissive,
+            emissiveIntensity: 0.18,
+            metalness: 0.35,
+            roughness: 0.46,
+          });
+          object.setAttribute("shadow", "cast: true; receive: true");
+          object.setAttribute("interactive-surface", {
+            label: project.name,
+            hoverColor: project.hoverColor,
+            emissive: project.accent,
+          });
+          object.setAttribute("animation__idle", {
+            property: "rotation",
+            to: `${project.rotation.split(" ")[0]} ${Number(project.rotation.split(" ")[1]) + 360} ${project.rotation.split(" ")[2]}`,
+            dur: 46000,
+            easing: "linear",
+            loop: true,
+          });
+          projectRoot.appendChild(object);
+        });
+      };
+
+      window.addEventListener("DOMContentLoaded", () => {
+        createSocialLinks();
+        createProjectObjects();
+      });
+    </script>
+  </head>
+  <body>
+    <a-scene
+      background="color: #030306"
+      fog="type: exponential; color: #08070b; density: 0.052"
+      renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true"
+      shadow="type: pcfsoft"
+      xr-mode-ui="enabled: true"
+    >
+      <!-- Intentional dark gallery atmosphere: fog, low light, and a non-default reflective floor. -->
+      <a-assets>
+        <a-mixin
+          id="soft-glow"
+          material="shader: standard; transparent: true; opacity: 0.42; side: double"
+        ></a-mixin>
+      </a-assets>
+
+      <a-entity light="type: ambient; color: #6f7484; intensity: 0.46"></a-entity>
+      <a-entity
+        position="-3.6 7 -4.2"
+        light="type: directional; color: #d7d9ea; intensity: 0.8; castShadow: true"
+      ></a-entity>
+      <a-entity position="0 2.8 0" light="type: point; color: #e01822; intensity: 1.6; distance: 8"></a-entity>
+      <a-entity position="10 2.2 5" light="type: point; color: #ffd15c; intensity: 0.75; distance: 5"></a-entity>
+
+      <a-sky color="#020205"></a-sky>
+      <a-plane
+        position="0 -0.02 0"
+        rotation="-90 0 0"
+        width="38"
+        height="38"
+        color="#090a0f"
+        material="roughness: 0.72; metalness: 0.18; emissive: #05060a; emissiveIntensity: 0.25"
+        shadow="receive: true"
+      ></a-plane>
+
+      <a-ring
+        position="0 0.005 0"
+        rotation="-90 0 0"
+        radius-inner="2.05"
+        radius-outer="2.09"
+        material="shader: flat; color: #531016; opacity: 0.72; transparent: true"
+      ></a-ring>
+      <a-ring
+        position="0 0.006 0"
+        rotation="-90 0 0"
+        radius-inner="5.9"
+        radius-outer="5.94"
+        material="shader: flat; color: #20293a; opacity: 0.5; transparent: true"
+      ></a-ring>
+      <a-ring
+        position="0 0.007 0"
+        rotation="-90 0 0"
+        radius-inner="8.9"
+        radius-outer="8.94"
+        material="shader: flat; color: #2e2718; opacity: 0.38; transparent: true"
+      ></a-ring>
+
+      <!-- Heartbeat core: the living center of the XO room. -->
+      <a-entity id="core-wrap" position="0 1.55 0">
+        <a-dodecahedron
+          id="heartbeat-core"
+          class="interactive"
+          radius="1.08"
+          color="#b40712"
+          material="metalness: 0.18; roughness: 0.28; emissive: #e01520; emissiveIntensity: 1.05"
+          heartbeat-core
+          shadow="cast: true"
+          animation__rotate="property: rotation; to: 0 360 0; dur: 28000; easing: linear; loop: true"
+          animation__pulse="property: scale; from: 1 1 1; to: 1.07 1.07 1.07; dir: alternate; dur: 1450; easing: easeInOutSine; loop: true"
+        ></a-dodecahedron>
+
+        <a-entity
+          id="social-orbit"
+          visible="false"
+          scale="0.001 0.001 0.001"
+          position="0 0.1 0"
+          orbit="speed: 10"
+        ></a-entity>
+      </a-entity>
+
+      <a-entity id="project-objects"></a-entity>
+
+      <!-- Hidden nook: a discoverable side chamber for future secret content or sound design. -->
+      <a-entity id="hidden-nook" position="10 0 5" rotation="0 -18 0">
+        <a-box
+          position="0 1.5 -1.55"
+          width="4.4"
+          height="3"
+          depth="0.22"
+          color="#07080c"
+          material="roughness: 0.84; metalness: 0.08; emissive: #040407; emissiveIntensity: 0.35"
+          shadow="receive: true"
+        ></a-box>
+        <a-box
+          position="-2.1 1.5 0"
+          width="0.22"
+          height="3"
+          depth="3.3"
+          color="#06070a"
+          material="roughness: 0.9; metalness: 0.05"
+          shadow="receive: true"
+        ></a-box>
+        <a-box
+          position="2.1 1.5 0"
+          width="0.22"
+          height="3"
+          depth="3.3"
+          color="#06070a"
+          material="roughness: 0.9; metalness: 0.05"
+          shadow="receive: true"
+        ></a-box>
+        <a-plane
+          position="0 0.01 0"
+          rotation="-90 0 0"
+          width="4.4"
+          height="3.4"
+          color="#0b0b07"
+          material="roughness: 0.76; metalness: 0.12; emissive: #161005; emissiveIntensity: 0.18"
+        ></a-plane>
+        <a-sphere
+          class="interactive"
+          position="0 1.55 -0.55"
+          radius="0.38"
+          color="#ffc928"
+          material="emissive: #ffd95e; emissiveIntensity: 0.9; roughness: 0.22; metalness: 0.06"
+          secret-sphere
+          animation__float="property: position; from: 0 1.42 -0.55; to: 0 1.76 -0.55; dir: alternate; dur: 2400; easing: easeInOutSine; loop: true"
+        ></a-sphere>
+        <!-- Sound placeholder: a low, warm tone could fade in here as the visitor enters the nook. -->
+      </a-entity>
+
+      <!-- Desktop testing uses WASD + mouse look; WebXR remains available through A-Frame. -->
+      <a-entity id="camera-rig" position="0 0 8">
+        <a-camera wasd-controls="acceleration: 24" look-controls="pointerLockEnabled: true">
+          <a-cursor
+            raycaster="objects: .interactive"
+            fuse="true"
+            fuse-timeout="650"
+            material="color: #f4ede5; shader: flat; opacity: 0.78"
+            geometry="primitive: ring; radiusInner: 0.008; radiusOuter: 0.014"
+          ></a-cursor>
+        </a-camera>
+      </a-entity>
+      <a-entity laser-controls="hand: left" raycaster="objects: .interactive"></a-entity>
+      <a-entity laser-controls="hand: right" raycaster="objects: .interactive"></a-entity>
+    </a-scene>
+  </body>
+</html>

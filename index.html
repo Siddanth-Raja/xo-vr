@@ -194,6 +194,27 @@
         { start: "-19.7 0.12 -11.4", end: "-23.4 0.12 -10.8", color: "#8ef0c6", opacity: 0.26 },
       ];
 
+      const INTERACTION_CONFIG = {
+        core: {
+          center: new THREE.Vector3(0, 1.55, 0),
+          activationRadius: 5.8,
+          fullIntensityRadius: 2.2,
+          baseCoreLight: 1.85,
+          baseAuraOpacity: 0.14,
+          baseOuterAuraOpacity: 0.075,
+          baseNetworkOpacity: 0.38,
+        },
+        dance: {
+          radius: 5.8,
+          movementThreshold: 0.08,
+          stepCooldownMs: 520,
+          baseFogDensity: 0.044,
+          activeFogDensity: 0.052,
+          baseLightIntensity: 0.26,
+          pulseLightIntensity: 0.9,
+        },
+      };
+
       const LIVE_EVENT_PROJECTS = [
         {
           name: "Late Night Distillery Rave - Cicada DTX",
@@ -359,16 +380,26 @@
           this.coreAura = document.querySelector("#core-aura");
           this.outerAura = document.querySelector("#core-outer-aura");
           this.baseIntensity = 1.85;
+          this.isActive = false;
           this.el.addEventListener("mouseenter", () => this.setActive(true));
           this.el.addEventListener("mouseleave", () => this.setActive(false));
         },
         tick(time) {
           const pulse = 1 + Math.sin(time * 0.0028) * 0.12;
-          if (this.coreLight) this.coreLight.setAttribute("light", "intensity", this.baseIntensity * pulse);
+          const presence = this.el.sceneEl.components["core-presence"];
+          const proximityBoost = presence?.boost || 0;
+          if (this.coreLight) {
+            this.coreLight.setAttribute(
+              "light",
+              "intensity",
+              (this.baseIntensity + proximityBoost * 0.58) * pulse,
+            );
+          }
           if (this.coreAura) this.coreAura.object3D.scale.setScalar(1.05 + Math.sin(time * 0.0018) * 0.035);
           if (this.outerAura) this.outerAura.object3D.scale.setScalar(1.02 + Math.sin(time * 0.0012) * 0.025);
         },
         setActive(active) {
+          this.isActive = active;
           this.socialOrbit.setAttribute("visible", active);
           this.socialOrbit.setAttribute("animation__fade", {
             property: "scale",
@@ -388,6 +419,222 @@
           if (this.outerAura) {
             setMaterial(this.outerAura, {
               opacity: active ? 0.16 : 0.075,
+            });
+          }
+        },
+      });
+
+      AFRAME.registerComponent("core-presence", {
+        schema: {
+          activationRadius: { default: INTERACTION_CONFIG.core.activationRadius },
+          fullIntensityRadius: { default: INTERACTION_CONFIG.core.fullIntensityRadius },
+        },
+        init() {
+          this.coreLight = document.querySelector("#core-light");
+          this.coreAura = document.querySelector("#core-aura");
+          this.outerAura = document.querySelector("#core-outer-aura");
+          this.heartbeatCore = document.querySelector("#heartbeat-core");
+          this.socialOrbit = document.querySelector("#social-orbit");
+          this.networkLines = [];
+          this.cameraPosition = new THREE.Vector3();
+          this.boost = 0;
+        },
+        tick() {
+          const camera = this.el.camera;
+          if (!camera) return;
+
+          if (!this.coreAura) this.coreAura = document.querySelector("#core-aura");
+          if (!this.outerAura) this.outerAura = document.querySelector("#core-outer-aura");
+          if (!this.heartbeatCore) this.heartbeatCore = document.querySelector("#heartbeat-core");
+          if (!this.socialOrbit) this.socialOrbit = document.querySelector("#social-orbit");
+          if (!this.networkLines.length) {
+            this.networkLines = [...document.querySelectorAll(".core-network-line")];
+          }
+
+          camera.el.object3D.getWorldPosition(this.cameraPosition);
+          const distance = this.cameraPosition.distanceTo(INTERACTION_CONFIG.core.center);
+          const range = this.data.activationRadius - this.data.fullIntensityRadius;
+          const rawBoost = THREE.MathUtils.clamp(
+            (this.data.activationRadius - distance) / range,
+            0,
+            1,
+          );
+          this.boost = rawBoost * rawBoost;
+
+          if (this.coreAura) {
+            const hoverBoost = this.heartbeatCore?.components["heartbeat-core"]?.isActive ? 1 : 0;
+            setMaterial(this.coreAura, {
+              opacity:
+                INTERACTION_CONFIG.core.baseAuraOpacity + this.boost * 0.09 + hoverBoost * 0.05,
+              emissiveIntensity: 0.58 + this.boost * 0.28,
+            });
+          }
+
+          if (this.outerAura) {
+            const hoverBoost = this.heartbeatCore?.components["heartbeat-core"]?.isActive ? 1 : 0;
+            setMaterial(this.outerAura, {
+              opacity:
+                INTERACTION_CONFIG.core.baseOuterAuraOpacity +
+                this.boost * 0.05 +
+                hoverBoost * 0.035,
+              emissiveIntensity: 0.42 + this.boost * 0.18,
+            });
+          }
+
+          this.networkLines.forEach((line) => {
+            const currentLine = line.getAttribute("line") || {};
+            const baseOpacity =
+              Number(line.dataset.baseOpacity) || INTERACTION_CONFIG.core.baseNetworkOpacity;
+            line.setAttribute("line", {
+              ...currentLine,
+              opacity: baseOpacity + this.boost * 0.24,
+            });
+          });
+
+          if (this.socialOrbit) {
+            this.socialOrbit.dataset.ready = this.boost > 0.18 ? "true" : "false";
+          }
+        },
+      });
+
+      AFRAME.registerComponent("dance-room-response", {
+        schema: {
+          radius: { default: INTERACTION_CONFIG.dance.radius },
+          movementThreshold: { default: INTERACTION_CONFIG.dance.movementThreshold },
+          stepCooldownMs: { default: INTERACTION_CONFIG.dance.stepCooldownMs },
+        },
+        init() {
+          this.anchor = document.querySelector("#dance-room-anchor");
+          this.pulse = document.querySelector("#dance-step-pulse");
+          this.pulseLight = document.querySelector("#dance-step-light");
+          this.cameraPosition = new THREE.Vector3();
+          this.previousPosition = new THREE.Vector3();
+          this.anchorPosition = new THREE.Vector3();
+          this.localStepPosition = new THREE.Vector3();
+          this.hasPreviousPosition = false;
+          this.lastStepTime = 0;
+          this.insideDanceRoom = false;
+          this.pulseListenerBound = false;
+
+          if (this.pulse) {
+            this.pulseListenerBound = true;
+            this.pulse.addEventListener("animationcomplete__fade", () => {
+              this.pulse.setAttribute("visible", "false");
+            });
+          }
+        },
+        tick(time) {
+          const camera = this.el.camera;
+          if (!this.anchor) this.anchor = document.querySelector("#dance-room-anchor");
+          if (!this.pulse) this.pulse = document.querySelector("#dance-step-pulse");
+          if (!this.pulseLight) this.pulseLight = document.querySelector("#dance-step-light");
+          if (this.pulse && !this.pulseListenerBound) {
+            this.pulseListenerBound = true;
+            this.pulse.addEventListener("animationcomplete__fade", () => {
+              this.pulse.setAttribute("visible", "false");
+            });
+          }
+          if (!camera || !this.anchor) return;
+
+          camera.el.object3D.getWorldPosition(this.cameraPosition);
+          this.anchor.object3D.getWorldPosition(this.anchorPosition);
+
+          const dx = this.cameraPosition.x - this.anchorPosition.x;
+          const dz = this.cameraPosition.z - this.anchorPosition.z;
+          const distanceFromDanceCenter = Math.sqrt(dx * dx + dz * dz);
+          const inside = distanceFromDanceCenter <= this.data.radius;
+
+          if (inside !== this.insideDanceRoom) {
+            this.insideDanceRoom = inside;
+            this.setDancePresence(inside);
+          }
+
+          if (!this.hasPreviousPosition) {
+            this.previousPosition.copy(this.cameraPosition);
+            this.hasPreviousPosition = true;
+            return;
+          }
+
+          const movementX = this.cameraPosition.x - this.previousPosition.x;
+          const movementZ = this.cameraPosition.z - this.previousPosition.z;
+          const movement = Math.sqrt(movementX * movementX + movementZ * movementZ);
+
+          if (
+            inside &&
+            movement >= this.data.movementThreshold &&
+            time - this.lastStepTime >= this.data.stepCooldownMs
+          ) {
+            this.lastStepTime = time;
+            this.triggerStepPulse();
+          }
+
+          this.previousPosition.copy(this.cameraPosition);
+        },
+        setDancePresence(active) {
+          this.el.setAttribute("fog", {
+            ...(this.el.getAttribute("fog") || {}),
+            density: active
+              ? INTERACTION_CONFIG.dance.activeFogDensity
+              : INTERACTION_CONFIG.dance.baseFogDensity,
+          });
+
+          if (this.pulseLight) {
+            this.pulseLight.setAttribute(
+              "light",
+              "intensity",
+              active ? INTERACTION_CONFIG.dance.baseLightIntensity : 0.05,
+            );
+          }
+        },
+        triggerStepPulse() {
+          if (!this.pulse || !this.anchor) return;
+
+          this.localStepPosition.copy(this.cameraPosition);
+          this.anchor.object3D.worldToLocal(this.localStepPosition);
+          this.pulse.object3D.position.set(this.localStepPosition.x, 0.24, this.localStepPosition.z);
+          this.pulse.setAttribute("visible", "true");
+          this.pulse.setAttribute("scale", "0.28 0.28 0.28");
+          this.pulse.removeAttribute("animation__expand");
+          this.pulse.removeAttribute("animation__fade");
+          this.pulse.setAttribute("material", {
+            shader: "flat",
+            color: "#ffbd78",
+            opacity: 0.34,
+            transparent: true,
+            side: "double",
+          });
+          this.pulse.setAttribute("animation__expand", {
+            property: "scale",
+            from: "0.28 0.28 0.28",
+            to: "2.05 2.05 2.05",
+            dur: 680,
+            easing: "easeOutQuad",
+          });
+          this.pulse.setAttribute("animation__fade", {
+            property: "material.opacity",
+            from: 0.34,
+            to: 0,
+            dur: 680,
+            easing: "easeOutQuad",
+          });
+
+          if (this.pulseLight) {
+            this.pulseLight.object3D.position.set(
+              this.localStepPosition.x,
+              1.05,
+              this.localStepPosition.z,
+            );
+            this.pulseLight.removeAttribute("animation__step");
+            this.pulseLight.setAttribute(
+              "light",
+              "intensity",
+              INTERACTION_CONFIG.dance.pulseLightIntensity,
+            );
+            this.pulseLight.setAttribute("animation__step", {
+              property: "light.intensity",
+              to: INTERACTION_CONFIG.dance.baseLightIntensity,
+              dur: 760,
+              easing: "easeOutQuad",
             });
           }
         },
@@ -577,11 +824,13 @@
         const lineRoot = document.querySelector("#network-lines");
         NETWORK_LINES.forEach((line) => {
           const strand = document.createElement("a-entity");
+          strand.setAttribute("class", "core-network-line");
+          strand.dataset.baseOpacity = INTERACTION_CONFIG.core.baseNetworkOpacity;
           strand.setAttribute("line", {
             start: line.from,
             end: line.to,
             color: line.color,
-            opacity: 0.38,
+            opacity: INTERACTION_CONFIG.core.baseNetworkOpacity,
           });
           lineRoot.appendChild(strand);
         });
@@ -1156,6 +1405,8 @@
       renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true"
       shadow="type: pcfsoft"
       xr-mode-ui="enabled: true"
+      core-presence="activationRadius: 5.8; fullIntensityRadius: 2.2"
+      dance-room-response="radius: 5.8; movementThreshold: 0.08; stepCooldownMs: 520"
     >
       <!-- Intentional dark gallery atmosphere: fog, low light, and a non-default reflective floor. -->
       <a-assets>
@@ -1509,6 +1760,22 @@
         ></a-entity>
         <a-entity
           line="start: -0.85 0.24 2.9; end: -3.1 0.24 -1.6; color: #ff8fd2; opacity: 0.24"
+        ></a-entity>
+
+        <!-- Dance Room response system: a restrained floor pulse follows real movement inside this room only. -->
+        <a-ring
+          id="dance-step-pulse"
+          position="0 0.24 0"
+          rotation="-90 0 0"
+          radius-inner="0.36"
+          radius-outer="0.42"
+          visible="false"
+          material="shader: flat; color: #ffbd78; opacity: 0; transparent: true; side: double"
+        ></a-ring>
+        <a-entity
+          id="dance-step-light"
+          position="0 1.05 0"
+          light="type: point; color: #ff9fba; intensity: 0.05; distance: 5.8"
         ></a-entity>
 
         <a-entity id="dance-projects"></a-entity>

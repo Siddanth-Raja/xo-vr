@@ -98,19 +98,19 @@
         },
         {
           name: "XO Merch / NPC",
-          geometry: "primitive: box; width: 0.78; height: 1.9; depth: 0.42",
+          geometry: "primitive: box; width: 0.72; height: 1.32; depth: 0.38",
           position: "4.35 1.08 2.75",
-          rotation: "0 -35 0",
-          color: "#17140d",
-          emissive: "#4e3f1c",
-          accent: "#ffd86a",
-          hoverColor: "#3a311b",
+          rotation: "0 170 0",
+          color: "#070708",
+          emissive: "#111114",
+          accent: "#b7b8c0",
+          hoverColor: "#101014",
           scale: "1 1 1",
           labelOffset: "0 1.42 0",
           idleDuration: 58000,
           detail: "sentinel",
-          metalness: 0.36,
-          roughness: 0.28,
+          metalness: 0.12,
+          roughness: 0.78,
         },
       ];
 
@@ -420,16 +420,55 @@
         }
 
         if (project.detail === "sentinel") {
+          const hood = document.createElement("a-sphere");
+          hood.setAttribute("radius", "0.36");
+          hood.setAttribute("position", "0 0.86 0.01");
+          hood.setAttribute("scale", "0.95 1.08 0.78");
+          hood.setAttribute("material", "color: #060607; emissive: #101014; emissiveIntensity: 0.18; roughness: 0.86; metalness: 0.06");
+
           const head = document.createElement("a-sphere");
-          head.setAttribute("radius", "0.28");
-          head.setAttribute("position", "0 1.13 0");
-          head.setAttribute("material", "color: #2a2315; emissive: #ffd86a; emissiveIntensity: 0.36; roughness: 0.45");
-          const chest = document.createElement("a-ring");
-          chest.setAttribute("radius-inner", "0.22");
-          chest.setAttribute("radius-outer", "0.24");
-          chest.setAttribute("position", "0 0.27 0.225");
-          chest.setAttribute("material", "shader: flat; color: #ffd86a; opacity: 0.42; transparent: true");
-          object.append(head, chest);
+          head.setAttribute("radius", "0.25");
+          head.setAttribute("position", "0 0.91 0.07");
+          head.setAttribute("scale", "0.86 1 0.78");
+          head.setAttribute("material", "color: #030304; emissive: #08080a; emissiveIntensity: 0.12; roughness: 0.9; metalness: 0.04");
+
+          const leftArm = document.createElement("a-cylinder");
+          leftArm.setAttribute("radius", "0.07");
+          leftArm.setAttribute("height", "0.98");
+          leftArm.setAttribute("position", "-0.47 -0.1 0");
+          leftArm.setAttribute("rotation", "0 0 -8");
+          leftArm.setAttribute("material", "color: #050506; emissive: #0c0c10; emissiveIntensity: 0.1; roughness: 0.88; metalness: 0.04");
+
+          const rightArm = document.createElement("a-cylinder");
+          rightArm.setAttribute("radius", "0.07");
+          rightArm.setAttribute("height", "0.98");
+          rightArm.setAttribute("position", "0.47 -0.1 0");
+          rightArm.setAttribute("rotation", "0 0 8");
+          rightArm.setAttribute("material", "color: #050506; emissive: #0c0c10; emissiveIntensity: 0.1; roughness: 0.88; metalness: 0.04");
+
+          const leftLeg = document.createElement("a-cylinder");
+          leftLeg.setAttribute("radius", "0.09");
+          leftLeg.setAttribute("height", "0.84");
+          leftLeg.setAttribute("position", "-0.17 -0.98 0");
+          leftLeg.setAttribute("material", "color: #040405; emissive: #09090c; emissiveIntensity: 0.08; roughness: 0.9; metalness: 0.04");
+
+          const rightLeg = document.createElement("a-cylinder");
+          rightLeg.setAttribute("radius", "0.09");
+          rightLeg.setAttribute("height", "0.84");
+          rightLeg.setAttribute("position", "0.17 -0.98 0");
+          rightLeg.setAttribute("material", "color: #040405; emissive: #09090c; emissiveIntensity: 0.08; roughness: 0.9; metalness: 0.04");
+
+          const logo = document.createElement("a-plane");
+          logo.setAttribute("position", "0 0.18 0.196");
+          logo.setAttribute("width", "0.36");
+          logo.setAttribute("height", "0.36");
+          logo.setAttribute("material", "shader: flat; src: #xo-logo; opacity: 0.88; transparent: true");
+
+          const rim = document.createElement("a-entity");
+          rim.setAttribute("position", "0.45 0.78 -0.3");
+          rim.setAttribute("light", "type: point; color: #bfc2d8; intensity: 0.18; distance: 2.4");
+
+          object.append(hood, head, leftArm, rightArm, leftLeg, rightLeg, logo, rim);
         }
       };
 
@@ -625,6 +664,7 @@
     >
       <!-- Intentional dark gallery atmosphere: fog, low light, and a non-default reflective floor. -->
       <a-assets>
+        <img id="xo-logo" src="assets/xo-logo.jpg" alt="XO logo" />
         <a-mixin
           id="soft-glow"
           material="shader: standard; transparent: true; opacity: 0.42; side: double"

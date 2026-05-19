@@ -248,6 +248,53 @@
         { position: "-0.92 0.32 1.05", color: "#8ef0c6", delay: 1440 },
       ];
 
+      const BRAND_PROJECTS = [
+        {
+          name: "ROXOR Product Video & Photo",
+          position: "0 1.55 -2.35",
+          rotation: "0 32 0",
+          scale: "1 1 1",
+          color: "#d8f0ff",
+          emissive: "#132d46",
+          accent: "#7fd2ff",
+          hoverColor: "#e8f6ff",
+          labelOffset: "0 1.7 0",
+          detail: "product",
+          idleDuration: 68000,
+          metalness: 0.58,
+          roughness: 0.08,
+        },
+        {
+          name: "XO Merch / Hoodies",
+          geometry: "primitive: box; width: 0.74; height: 1.42; depth: 0.42",
+          position: "0 1.18 2.25",
+          rotation: "0 180 0",
+          scale: "1 1 1",
+          color: "#050507",
+          emissive: "#111827",
+          accent: "#dce8ff",
+          hoverColor: "#0d1119",
+          labelOffset: "0 1.38 0",
+          detail: "archive",
+          idleDuration: 62000,
+          metalness: 0.18,
+          roughness: 0.7,
+        },
+      ];
+
+      const BRAND_COLUMNS = [-5.2, -2.6, 0, 2.6, 5.2].flatMap((z, index) => [
+        { position: "-3.05 1.75 " + z, height: 3.5 + (index === 2 ? 0.35 : 0), side: "left" },
+        { position: "3.05 1.75 " + z, height: 3.5 + (index === 2 ? 0.35 : 0), side: "right" },
+      ]);
+
+      const BRAND_TRAILS = [
+        { start: "0 0.105 4.95", end: "0 0.105 8.2", color: "#314b68", opacity: 0.28 },
+        { start: "0 0.105 8.2", end: "0 0.105 11.35", color: "#406e9a", opacity: 0.32 },
+        { start: "0 0.11 11.35", end: "0 0.11 15.15", color: "#65b7ff", opacity: 0.34 },
+        { start: "-1.15 0.112 15.15", end: "-1.15 0.112 21.35", color: "#2f78bd", opacity: 0.24 },
+        { start: "1.15 0.112 15.15", end: "1.15 0.112 21.35", color: "#2f78bd", opacity: 0.24 },
+      ];
+
       const setMaterial = (el, values) => {
         const current = el.getAttribute("material") || {};
         el.setAttribute("material", { ...current, ...values });
@@ -645,7 +692,7 @@
         DANCE_PROJECTS.forEach((project) => {
           const object = document.createElement("a-entity");
           object.setAttribute("class", "interactive");
-          object.setAttribute("geometry", project.geometry);
+          if (project.geometry) object.setAttribute("geometry", project.geometry);
           object.setAttribute("position", project.position);
           object.setAttribute("rotation", project.rotation);
           object.setAttribute("scale", project.scale);
@@ -846,12 +893,259 @@
         });
       };
 
+      const addBrandDetail = (object, project) => {
+        if (project.detail === "product") {
+          const pedestal = document.createElement("a-cylinder");
+          pedestal.setAttribute("radius", "0.92");
+          pedestal.setAttribute("height", "0.18");
+          pedestal.setAttribute("segments-radial", "48");
+          pedestal.setAttribute("position", "0 -1.04 0");
+          pedestal.setAttribute("material", "color: #070a0f; emissive: #14334f; emissiveIntensity: 0.32; metalness: 0.68; roughness: 0.18");
+
+          const edge = document.createElement("a-ring");
+          edge.setAttribute("radius-inner", "1.02");
+          edge.setAttribute("radius-outer", "1.045");
+          edge.setAttribute("rotation", "-90 0 0");
+          edge.setAttribute("position", "0 -0.91 0");
+          edge.setAttribute("material", "shader: flat; color: #7fd2ff; opacity: 0.34; transparent: true");
+
+          const body = document.createElement("a-box");
+          body.setAttribute("width", "0.82");
+          body.setAttribute("height", "1.72");
+          body.setAttribute("depth", "0.58");
+          body.setAttribute("position", "0 -0.08 0");
+          body.setAttribute("material", "color: #d8f0ff; emissive: #8fd5ff; emissiveIntensity: 0.18; opacity: 0.24; transparent: true; metalness: 0.58; roughness: 0.08");
+          body.setAttribute("shadow", "cast: true; receive: true");
+
+          const base = document.createElement("a-box");
+          base.setAttribute("width", "0.92");
+          base.setAttribute("height", "0.16");
+          base.setAttribute("depth", "0.66");
+          base.setAttribute("position", "0 -0.98 0");
+          base.setAttribute("material", "color: #f1fbff; emissive: #83d7ff; emissiveIntensity: 0.18; opacity: 0.26; transparent: true; metalness: 0.62; roughness: 0.07");
+
+          const shoulder = document.createElement("a-box");
+          shoulder.setAttribute("width", "1.02");
+          shoulder.setAttribute("height", "0.18");
+          shoulder.setAttribute("depth", "0.72");
+          shoulder.setAttribute("position", "0 0.86 0");
+          shoulder.setAttribute("material", "color: #e5f6ff; emissive: #9adaff; emissiveIntensity: 0.18; opacity: 0.24; transparent: true; metalness: 0.58; roughness: 0.07");
+
+          const neck = document.createElement("a-box");
+          neck.setAttribute("width", "0.36");
+          neck.setAttribute("height", "0.66");
+          neck.setAttribute("depth", "0.34");
+          neck.setAttribute("position", "0 1.2 0");
+          neck.setAttribute("material", "color: #dff4ff; emissive: #83d7ff; emissiveIntensity: 0.14; opacity: 0.22; transparent: true; metalness: 0.54; roughness: 0.08");
+
+          const neckRing = document.createElement("a-box");
+          neckRing.setAttribute("width", "0.46");
+          neckRing.setAttribute("height", "0.08");
+          neckRing.setAttribute("depth", "0.42");
+          neckRing.setAttribute("position", "0 1.54 0");
+          neckRing.setAttribute("material", "color: #f6fbff; emissive: #83d7ff; emissiveIntensity: 0.12; opacity: 0.26; transparent: true; metalness: 0.5; roughness: 0.08");
+
+          const cap = document.createElement("a-box");
+          cap.setAttribute("width", "0.54");
+          cap.setAttribute("height", "0.24");
+          cap.setAttribute("depth", "0.46");
+          cap.setAttribute("position", "0 1.72 0");
+          cap.setAttribute("material", "color: #020204; emissive: #090b10; emissiveIntensity: 0.28; metalness: 0.34; roughness: 0.28");
+
+          const label = document.createElement("a-plane");
+          label.setAttribute("width", "0.96");
+          label.setAttribute("height", "0.3");
+          label.setAttribute("position", "0 0.08 0.302");
+          label.setAttribute("material", "shader: flat; color: #f7f6f0; opacity: 0.9; transparent: true; side: double");
+
+          const labelText = document.createElement("a-text");
+          labelText.setAttribute("value", "ROXOR");
+          labelText.setAttribute("align", "center");
+          labelText.setAttribute("width", "2.2");
+          labelText.setAttribute("color", "#050506");
+          labelText.setAttribute("position", "0 0.065 0.307");
+          labelText.setAttribute("material", "shader: flat");
+
+          const labelSubtext = document.createElement("a-text");
+          labelSubtext.setAttribute("value", "ARTISAN GIN");
+          labelSubtext.setAttribute("align", "center");
+          labelSubtext.setAttribute("width", "1.18");
+          labelSubtext.setAttribute("color", "#141414");
+          labelSubtext.setAttribute("position", "0 -0.045 0.308");
+          labelSubtext.setAttribute("material", "shader: flat; opacity: 0.72");
+
+          [-0.36, 0, 0.36].forEach((x) => {
+            const facet = document.createElement("a-box");
+            facet.setAttribute("width", "0.024");
+            facet.setAttribute("height", "1.54");
+            facet.setAttribute("depth", "0.018");
+            facet.setAttribute("position", `${x} -0.11 0.312`);
+            facet.setAttribute("material", "color: #f2fbff; emissive: #b7e8ff; emissiveIntensity: 0.22; opacity: 0.34; transparent: true; metalness: 0.34; roughness: 0.12");
+            object.appendChild(facet);
+          });
+
+          [-0.68, -0.36, -0.04, 0.34, 0.66].forEach((y) => {
+            const seam = document.createElement("a-box");
+            seam.setAttribute("width", "0.86");
+            seam.setAttribute("height", "0.018");
+            seam.setAttribute("depth", "0.018");
+            seam.setAttribute("position", `0 ${y} 0.314`);
+            seam.setAttribute("material", "color: #f2fbff; emissive: #b7e8ff; emissiveIntensity: 0.2; opacity: 0.3; transparent: true; metalness: 0.28; roughness: 0.14");
+            object.appendChild(seam);
+          });
+
+          [-0.46, 0.46].forEach((x) => {
+            const corner = document.createElement("a-box");
+            corner.setAttribute("width", "0.035");
+            corner.setAttribute("height", "1.84");
+            corner.setAttribute("depth", "0.035");
+            corner.setAttribute("position", `${x} -0.05 0.28`);
+            corner.setAttribute("material", "color: #ffffff; emissive: #aee4ff; emissiveIntensity: 0.24; opacity: 0.32; transparent: true; metalness: 0.42; roughness: 0.1");
+            object.appendChild(corner);
+          });
+
+          [-0.22, 0.22].forEach((x) => {
+            const capDetail = document.createElement("a-box");
+            capDetail.setAttribute("width", "0.015");
+            capDetail.setAttribute("height", "0.2");
+            capDetail.setAttribute("depth", "0.012");
+            capDetail.setAttribute("position", `${x} 1.72 0.24`);
+            capDetail.setAttribute("material", "color: #1d222a; emissive: #5a6b7c; emissiveIntensity: 0.28; opacity: 0.62; transparent: true");
+            object.appendChild(capDetail);
+          });
+
+          const scan = document.createElement("a-plane");
+          scan.setAttribute("width", "1.28");
+          scan.setAttribute("height", "0.025");
+          scan.setAttribute("position", "0 0.3 0.42");
+          scan.setAttribute("material", "shader: flat; color: #aee4ff; opacity: 0.36; transparent: true; side: double");
+          scan.setAttribute("animation__scan", {
+            property: "position",
+            from: "0 -0.7 0.42",
+            to: "0 1.22 0.42",
+            dir: "alternate",
+            dur: 3600,
+            easing: "easeInOutSine",
+            loop: true,
+          });
+
+          object.append(pedestal, edge, body, base, shoulder, neck, neckRing, cap, label, labelText, labelSubtext, scan);
+        }
+
+        if (project.detail === "archive") {
+          const hood = document.createElement("a-sphere");
+          hood.setAttribute("radius", "0.34");
+          hood.setAttribute("position", "0 0.83 0.03");
+          hood.setAttribute("scale", "0.92 1.05 0.72");
+          hood.setAttribute("material", "color: #030304; emissive: #111827; emissiveIntensity: 0.18; roughness: 0.86; metalness: 0.08");
+
+          const logo = document.createElement("a-plane");
+          logo.setAttribute("position", "0 0.18 0.216");
+          logo.setAttribute("width", "0.32");
+          logo.setAttribute("height", "0.32");
+          logo.setAttribute("material", "shader: flat; src: #xo-logo; opacity: 0.74; transparent: true");
+
+          const vitrine = document.createElement("a-box");
+          vitrine.setAttribute("width", "1.18");
+          vitrine.setAttribute("height", "1.88");
+          vitrine.setAttribute("depth", "0.72");
+          vitrine.setAttribute("position", "0 0.02 0");
+          vitrine.setAttribute("material", "shader: standard; color: #8fcfff; emissive: #173c5e; emissiveIntensity: 0.1; opacity: 0.12; transparent: true; metalness: 0.4; roughness: 0.05");
+
+          [-0.82, 0.82].forEach((x) => {
+            const sentinel = document.createElement("a-cylinder");
+            sentinel.setAttribute("radius", "0.055");
+            sentinel.setAttribute("height", "1.42");
+            sentinel.setAttribute("position", `${x} -0.08 0.18`);
+            sentinel.setAttribute("material", "color: #040506; emissive: #a8cfff; emissiveIntensity: 0.18; roughness: 0.72");
+            object.appendChild(sentinel);
+          });
+
+          object.append(hood, logo, vitrine);
+        }
+      };
+
+      const createBrandWorkRoom = () => {
+        const columnRoot = document.querySelector("#brand-columns");
+        BRAND_COLUMNS.forEach((column) => {
+          const body = document.createElement("a-box");
+          body.setAttribute("position", column.position);
+          body.setAttribute("width", "0.44");
+          body.setAttribute("height", column.height);
+          body.setAttribute("depth", "0.62");
+          body.setAttribute("material", {
+            color: "#05070b",
+            emissive: column.side === "left" ? "#0d3d74" : "#0e467d",
+            emissiveIntensity: 0.38,
+            metalness: 0.36,
+            roughness: 0.26,
+          });
+          body.setAttribute("shadow", "cast: true; receive: true");
+
+          const glow = document.createElement("a-plane");
+          glow.setAttribute("position", `${column.side === "left" ? 0.27 : -0.27} 0 0`);
+          glow.setAttribute("rotation", `0 ${column.side === "left" ? 90 : -90} 0`);
+          glow.setAttribute("width", "0.06");
+          glow.setAttribute("height", column.height - 0.32);
+          glow.setAttribute("material", "shader: flat; color: #1688ff; opacity: 0.44; transparent: true; side: double");
+          body.appendChild(glow);
+          columnRoot.appendChild(body);
+        });
+
+        const brandRoot = document.querySelector("#brand-projects");
+        BRAND_PROJECTS.forEach((project) => {
+          const object = document.createElement("a-entity");
+          object.setAttribute("class", "interactive");
+          object.setAttribute("geometry", project.geometry);
+          object.setAttribute("position", project.position);
+          object.setAttribute("rotation", project.rotation);
+          object.setAttribute("scale", project.scale);
+          object.setAttribute("material", {
+            color: project.color,
+            emissive: project.emissive,
+            emissiveIntensity: 0.32,
+            metalness: project.metalness,
+            roughness: project.roughness,
+          });
+          object.setAttribute("shadow", "cast: true; receive: true");
+          object.setAttribute("interactive-surface", {
+            label: project.name,
+            hoverColor: project.hoverColor,
+            emissive: project.accent,
+            hoverScale: 1.06,
+            labelOffset: project.labelOffset,
+          });
+          object.setAttribute("animation__brand", {
+            property: "rotation",
+            to: `${project.rotation.split(" ")[0]} ${Number(project.rotation.split(" ")[1]) + 360} ${project.rotation.split(" ")[2]}`,
+            dur: project.idleDuration,
+            easing: "linear",
+            loop: true,
+          });
+          addBrandDetail(object, project);
+          brandRoot.appendChild(object);
+        });
+
+        const trailRoot = document.querySelector("#brand-trails");
+        BRAND_TRAILS.forEach((trail) => {
+          const line = document.createElement("a-entity");
+          line.setAttribute("line", {
+            start: trail.start,
+            end: trail.end,
+            color: trail.color,
+            opacity: trail.opacity,
+          });
+          trailRoot.appendChild(line);
+        });
+      };
+
       window.addEventListener("DOMContentLoaded", () => {
         createSocialLinks();
         createNetworkLines();
         createProjectObjects();
         createDanceRoom();
         createLiveEventsRoom();
+        createBrandWorkRoom();
       });
     </script>
   </head>
@@ -922,6 +1216,22 @@
         position="13.2 2.2 -4.8"
         light="type: point; color: #8e4f75; intensity: 0.32; distance: 7"
       ></a-entity>
+      <a-entity
+        position="0 5.8 18.25"
+        light="type: spot; target: #brand-room-focal; angle: 24; penumbra: 0.88; color: #dceeff; intensity: 0.72; distance: 16; castShadow: true"
+      ></a-entity>
+      <a-entity
+        position="-4.15 2.15 18.25"
+        light="type: point; color: #1688ff; intensity: 0.68; distance: 8"
+      ></a-entity>
+      <a-entity
+        position="4.15 2.15 18.25"
+        light="type: point; color: #1688ff; intensity: 0.68; distance: 8"
+      ></a-entity>
+      <a-entity
+        position="0 1.15 12.25"
+        light="type: point; color: #4b93d6; intensity: 0.34; distance: 7"
+      ></a-entity>
       <a-entity position="10 2.2 5" light="type: point; color: #ffd15c; intensity: 0.75; distance: 5"></a-entity>
 
       <a-sky color="#020205"></a-sky>
@@ -929,7 +1239,7 @@
         position="0 -0.02 0"
         rotation="-90 0 0"
         width="58"
-        height="44"
+        height="50"
         color="#07080d"
         material="roughness: 0.38; metalness: 0.44; emissive: #030408; emissiveIntensity: 0.18"
         shadow="receive: true"
@@ -990,6 +1300,7 @@
       ></a-entity>
       <a-entity id="dance-trails"></a-entity>
       <a-entity id="live-event-trails"></a-entity>
+      <a-entity id="brand-trails"></a-entity>
 
       <!-- Safety clearance rule: the Core-to-Dance passage must stay visibly clear of core objects, especially XO Web. -->
       <a-entity id="liminal-corridor" position="-12.75 0 -5.45" rotation="0 -39 0">
@@ -1423,6 +1734,186 @@
         <a-entity
           line="start: 0.88 0.24 -0.82; end: 2.95 0.24 -1.42; color: #ffd08a; opacity: 0.28"
         ></a-entity>
+      </a-entity>
+
+      <!-- Brand Work branch: a cool axial installation chamber for polished project presentation. -->
+      <a-entity id="brand-transition" position="0 0 10.15" rotation="0 0 0">
+        <a-plane
+          position="0 0.04 0"
+          rotation="-90 0 0"
+          width="3.2"
+          height="8.6"
+          material="color: #05070b; emissive: #071526; emissiveIntensity: 0.22; metalness: 0.56; roughness: 0.2; opacity: 0.56; transparent: true"
+          shadow="receive: true"
+        ></a-plane>
+        <a-box
+          position="-1.72 1.35 -2.8"
+          width="0.12"
+          height="2.7"
+          depth="0.18"
+          material="color: #05070a; emissive: #123c68; emissiveIntensity: 0.28; metalness: 0.3; roughness: 0.34"
+        ></a-box>
+        <a-box
+          position="1.72 1.35 -2.8"
+          width="0.12"
+          height="2.7"
+          depth="0.18"
+          material="color: #05070a; emissive: #123c68; emissiveIntensity: 0.28; metalness: 0.3; roughness: 0.34"
+        ></a-box>
+        <a-box
+          position="-1.72 1.35 2.8"
+          width="0.12"
+          height="2.7"
+          depth="0.18"
+          material="color: #05070a; emissive: #123c68; emissiveIntensity: 0.22; metalness: 0.3; roughness: 0.34"
+        ></a-box>
+        <a-box
+          position="1.72 1.35 2.8"
+          width="0.12"
+          height="2.7"
+          depth="0.18"
+          material="color: #05070a; emissive: #123c68; emissiveIntensity: 0.22; metalness: 0.3; roughness: 0.34"
+        ></a-box>
+        <a-box
+          position="0 2.82 0"
+          width="3.65"
+          height="0.08"
+          depth="7.4"
+          material="color: #030508; emissive: #0c315b; emissiveIntensity: 0.13; metalness: 0.24; roughness: 0.38"
+        ></a-box>
+        <a-entity
+          line="start: -1.02 0.13 -3.95; end: -1.02 0.13 3.95; color: #5ebdff; opacity: 0.2"
+        ></a-entity>
+        <a-entity
+          line="start: 1.02 0.13 -3.95; end: 1.02 0.13 3.95; color: #5ebdff; opacity: 0.2"
+        ></a-entity>
+      </a-entity>
+
+      <a-entity id="brand-arrival-zone" position="0 0 14.15">
+        <a-plane
+          position="0 0.045 0"
+          rotation="-90 0 0"
+          width="6.4"
+          height="3.4"
+          material="color: #05070a; emissive: #081f36; emissiveIntensity: 0.24; metalness: 0.58; roughness: 0.18; opacity: 0.62; transparent: true"
+          shadow="receive: true"
+        ></a-plane>
+        <a-box
+          position="-3.1 1.55 0"
+          width="0.18"
+          height="3.1"
+          depth="1.9"
+          material="color: #040609; emissive: #0d4275; emissiveIntensity: 0.26; metalness: 0.34; roughness: 0.3"
+        ></a-box>
+        <a-box
+          position="3.1 1.55 0"
+          width="0.18"
+          height="3.1"
+          depth="1.9"
+          material="color: #040609; emissive: #0d4275; emissiveIntensity: 0.26; metalness: 0.34; roughness: 0.3"
+        ></a-box>
+        <a-ring
+          position="0 0.16 0"
+          rotation="-90 0 0"
+          radius-inner="1.2"
+          radius-outer="1.23"
+          material="shader: flat; color: #bfe6ff; opacity: 0.2; transparent: true"
+        ></a-ring>
+      </a-entity>
+
+      <a-entity id="brand-work-room-anchor" position="0 0 18.25">
+        <a-plane
+          position="0 0.035 0"
+          rotation="-90 0 0"
+          width="8.4"
+          height="12.6"
+          material="color: #04070b; emissive: #061322; emissiveIntensity: 0.34; metalness: 0.72; roughness: 0.12; opacity: 0.86; transparent: true"
+          shadow="receive: true"
+        ></a-plane>
+        <a-plane
+          position="0 3.55 -6.05"
+          width="8.6"
+          height="3.1"
+          material="shader: flat; color: #06101c; opacity: 0.24; transparent: true; side: double"
+        ></a-plane>
+        <a-plane
+          position="-4.05 2.1 0"
+          rotation="0 90 0"
+          width="12.2"
+          height="3.9"
+          material="shader: flat; color: #04111f; opacity: 0.16; transparent: true; side: double"
+        ></a-plane>
+        <a-plane
+          position="4.05 2.1 0"
+          rotation="0 -90 0"
+          width="12.2"
+          height="3.9"
+          material="shader: flat; color: #04111f; opacity: 0.16; transparent: true; side: double"
+        ></a-plane>
+        <a-box
+          position="0 3.95 0"
+          width="7.6"
+          height="0.08"
+          depth="11.3"
+          material="color: #020407; emissive: #0c315b; emissiveIntensity: 0.2; metalness: 0.24; roughness: 0.34"
+        ></a-box>
+        <a-box
+          position="-3.64 3.42 0"
+          width="0.08"
+          height="0.08"
+          depth="11.6"
+          material="color: #04101b; emissive: #1688ff; emissiveIntensity: 0.5; metalness: 0.18; roughness: 0.28"
+        ></a-box>
+        <a-box
+          position="3.64 3.42 0"
+          width="0.08"
+          height="0.08"
+          depth="11.6"
+          material="color: #04101b; emissive: #1688ff; emissiveIntensity: 0.5; metalness: 0.18; roughness: 0.28"
+        ></a-box>
+
+        <a-entity id="brand-columns"></a-entity>
+
+        <a-cylinder
+          id="brand-room-focal"
+          position="0 0.16 0"
+          radius="1.34"
+          height="0.22"
+          segments-radial="64"
+          material="color: #05070a; emissive: #0c2b48; emissiveIntensity: 0.36; metalness: 0.76; roughness: 0.14"
+          shadow="receive: true"
+        ></a-cylinder>
+        <a-ring
+          position="0 0.3 0"
+          rotation="-90 0 0"
+          radius-inner="1.48"
+          radius-outer="1.52"
+          material="shader: flat; color: #8bd8ff; opacity: 0.34; transparent: true"
+        ></a-ring>
+        <a-box
+          position="0 0.34 0"
+          width="2.4"
+          height="0.055"
+          depth="8.8"
+          material="color: #06101a; emissive: #174b78; emissiveIntensity: 0.24; metalness: 0.64; roughness: 0.16"
+        ></a-box>
+
+        <a-entity id="brand-projects"></a-entity>
+
+        <a-box
+          position="-2.15 0.32 0"
+          width="0.035"
+          height="0.035"
+          depth="10.4"
+          material="color: #06101b; emissive: #83d7ff; emissiveIntensity: 0.32; metalness: 0.14; roughness: 0.28"
+        ></a-box>
+        <a-box
+          position="2.15 0.32 0"
+          width="0.035"
+          height="0.035"
+          depth="10.4"
+          material="color: #06101b; emissive: #83d7ff; emissiveIntensity: 0.32; metalness: 0.14; roughness: 0.28"
+        ></a-box>
       </a-entity>
 
       <!-- Distant verticals give the core room depth without becoming new rooms yet. -->

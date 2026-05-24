@@ -207,13 +207,11 @@
         dance: {
           radius: 5.8,
           movementThreshold: 0.08,
-          stepCooldownMs: 520,
+          stepCooldownMs: 650,
           baseFogDensity: 0.044,
           activeFogDensity: 0.052,
-          baseLightIntensity: 0.26,
-          pulseLightIntensity: 0.9,
-          baseOverheadLightIntensity: 0.12,
-          pulseOverheadLightIntensity: 0.52,
+          baseLightIntensity: 0.1,
+          pulseLightIntensity: 0.34,
         },
       };
 
@@ -533,9 +531,6 @@
           this.anchor = document.querySelector("#dance-room-anchor");
           this.pulse = document.querySelector("#dance-step-pulse");
           this.pulseLight = document.querySelector("#dance-step-light");
-          this.verticalPulse = document.querySelector("#dance-vertical-pulse");
-          this.overheadLight = document.querySelector("#dance-overhead-response-light");
-          this.responsiveRibbons = [];
           this.cameraPosition = new THREE.Vector3();
           this.previousPosition = new THREE.Vector3();
           this.anchorPosition = new THREE.Vector3();
@@ -544,18 +539,11 @@
           this.lastStepTime = 0;
           this.insideDanceRoom = false;
           this.pulseListenerBound = false;
-          this.verticalPulseListenerBound = false;
 
           if (this.pulse) {
             this.pulseListenerBound = true;
             this.pulse.addEventListener("animationcomplete__fade", () => {
               this.pulse.setAttribute("visible", "false");
-            });
-          }
-          if (this.verticalPulse) {
-            this.verticalPulseListenerBound = true;
-            this.verticalPulse.addEventListener("animationcomplete__fade", () => {
-              this.verticalPulse.setAttribute("visible", "false");
             });
           }
         },
@@ -564,23 +552,10 @@
           if (!this.anchor) this.anchor = document.querySelector("#dance-room-anchor");
           if (!this.pulse) this.pulse = document.querySelector("#dance-step-pulse");
           if (!this.pulseLight) this.pulseLight = document.querySelector("#dance-step-light");
-          if (!this.verticalPulse) this.verticalPulse = document.querySelector("#dance-vertical-pulse");
-          if (!this.overheadLight) {
-            this.overheadLight = document.querySelector("#dance-overhead-response-light");
-          }
-          if (!this.responsiveRibbons.length) {
-            this.responsiveRibbons = [...document.querySelectorAll(".dance-responsive-ribbon")];
-          }
           if (this.pulse && !this.pulseListenerBound) {
             this.pulseListenerBound = true;
             this.pulse.addEventListener("animationcomplete__fade", () => {
               this.pulse.setAttribute("visible", "false");
-            });
-          }
-          if (this.verticalPulse && !this.verticalPulseListenerBound) {
-            this.verticalPulseListenerBound = true;
-            this.verticalPulse.addEventListener("animationcomplete__fade", () => {
-              this.verticalPulse.setAttribute("visible", "false");
             });
           }
           if (!camera || !this.anchor) return;
@@ -634,14 +609,6 @@
               active ? INTERACTION_CONFIG.dance.baseLightIntensity : 0.05,
             );
           }
-
-          if (this.overheadLight) {
-            this.overheadLight.setAttribute(
-              "light",
-              "intensity",
-              active ? INTERACTION_CONFIG.dance.baseOverheadLightIntensity : 0.03,
-            );
-          }
         },
         triggerStepPulse() {
           if (!this.pulse || !this.anchor) return;
@@ -650,69 +617,35 @@
           this.anchor.object3D.worldToLocal(this.localStepPosition);
           this.pulse.object3D.position.set(this.localStepPosition.x, 0.24, this.localStepPosition.z);
           this.pulse.setAttribute("visible", "true");
-          this.pulse.setAttribute("scale", "0.28 0.28 0.28");
+          this.pulse.setAttribute("scale", "0.24 0.24 0.24");
           this.pulse.removeAttribute("animation__expand");
           this.pulse.removeAttribute("animation__fade");
           this.pulse.setAttribute("material", {
             shader: "flat",
             color: "#ffbd78",
-            opacity: 0.34,
+            opacity: 0.24,
             transparent: true,
             side: "double",
           });
           this.pulse.setAttribute("animation__expand", {
             property: "scale",
-            from: "0.28 0.28 0.28",
-            to: "2.05 2.05 2.05",
-            dur: 680,
+            from: "0.24 0.24 0.24",
+            to: "1.38 1.38 1.38",
+            dur: 620,
             easing: "easeOutQuad",
           });
           this.pulse.setAttribute("animation__fade", {
             property: "material.opacity",
-            from: 0.34,
+            from: 0.24,
             to: 0,
-            dur: 680,
+            dur: 620,
             easing: "easeOutQuad",
           });
-
-          if (this.verticalPulse) {
-            this.verticalPulse.object3D.position.set(
-              this.localStepPosition.x,
-              1.62,
-              this.localStepPosition.z,
-            );
-            this.verticalPulse.setAttribute("visible", "true");
-            this.verticalPulse.setAttribute("scale", "0.42 0.16 0.42");
-            this.verticalPulse.removeAttribute("animation__rise");
-            this.verticalPulse.removeAttribute("animation__fade");
-            this.verticalPulse.setAttribute("material", {
-              color: "#ffbd78",
-              emissive: "#ff8fd2",
-              emissiveIntensity: 0.42,
-              opacity: 0.16,
-              transparent: true,
-              side: "double",
-            });
-            this.verticalPulse.setAttribute("animation__rise", {
-              property: "scale",
-              from: "0.42 0.16 0.42",
-              to: "1 1 1",
-              dur: 760,
-              easing: "easeOutQuad",
-            });
-            this.verticalPulse.setAttribute("animation__fade", {
-              property: "material.opacity",
-              from: 0.16,
-              to: 0,
-              dur: 760,
-              easing: "easeOutQuad",
-            });
-          }
 
           if (this.pulseLight) {
             this.pulseLight.object3D.position.set(
               this.localStepPosition.x,
-              1.05,
+              0.32,
               this.localStepPosition.z,
             );
             this.pulseLight.removeAttribute("animation__step");
@@ -728,33 +661,6 @@
               easing: "easeOutQuad",
             });
           }
-
-          if (this.overheadLight) {
-            this.overheadLight.removeAttribute("animation__step");
-            this.overheadLight.setAttribute(
-              "light",
-              "intensity",
-              INTERACTION_CONFIG.dance.pulseOverheadLightIntensity,
-            );
-            this.overheadLight.setAttribute("animation__step", {
-              property: "light.intensity",
-              to: INTERACTION_CONFIG.dance.baseOverheadLightIntensity,
-              dur: 900,
-              easing: "easeOutQuad",
-            });
-          }
-
-          this.responsiveRibbons.forEach((ribbon, index) => {
-            ribbon.removeAttribute("animation__step");
-            ribbon.setAttribute("animation__step", {
-              property: "scale",
-              from: "1 1 1",
-              to: index % 2 === 0 ? "1 1.16 1" : "1 1.08 1",
-              dir: "alternate",
-              dur: 460,
-              easing: "easeInOutSine",
-            });
-          });
         },
       });
 
@@ -1524,7 +1430,7 @@
       shadow="type: pcfsoft"
       xr-mode-ui="enabled: true"
       core-presence="activationRadius: 5.8; fullIntensityRadius: 2.2"
-      dance-room-response="radius: 5.8; movementThreshold: 0.08; stepCooldownMs: 520"
+      dance-room-response="radius: 5.8; movementThreshold: 0.08; stepCooldownMs: 650"
     >
       <!-- Intentional dark gallery atmosphere: fog, low light, and a non-default reflective floor. -->
       <a-assets>
@@ -1681,32 +1587,7 @@
           material="color: #06070b; emissive: #1a0b15; emissiveIntensity: 0.18; metalness: 0.32; roughness: 0.4; opacity: 0.5; transparent: true"
           shadow="receive: true"
         ></a-plane>
-        <a-plane
-          position="-3.85 1.5 -1.42"
-          width="3.6"
-          height="2.7"
-          material="shader: flat; color: #160b13; opacity: 0.13; transparent: true; side: double"
-        ></a-plane>
-        <a-plane
-          position="3.85 1.5 -1.42"
-          width="3.6"
-          height="2.7"
-          material="shader: flat; color: #160b13; opacity: 0.13; transparent: true; side: double"
-        ></a-plane>
-        <a-plane
-          position="-3.75 1.35 1.42"
-          rotation="0 180 0"
-          width="3.4"
-          height="2.35"
-          material="shader: flat; color: #061016; opacity: 0.1; transparent: true; side: double"
-        ></a-plane>
-        <a-plane
-          position="3.75 1.35 1.42"
-          rotation="0 180 0"
-          width="3.4"
-          height="2.35"
-          material="shader: flat; color: #061016; opacity: 0.1; transparent: true; side: double"
-        ></a-plane>
+        <!-- Center route stays visually open; corridor architecture is side-only and overhead. -->
         <a-box
           position="0 2.76 -1.42"
           width="12.4"
@@ -1766,34 +1647,7 @@
           material="color: #09070b; emissive: #2d121f; emissiveIntensity: 0.22; metalness: 0.3; roughness: 0.34; opacity: 0.62; transparent: true"
           shadow="receive: true"
         ></a-plane>
-        <a-plane
-          position="-3.65 1.02 -1.18"
-          rotation="0 76 0"
-          width="1.15"
-          height="1.62"
-          material="shader: flat; color: #180c13; opacity: 0.09; transparent: true; side: double"
-        ></a-plane>
-        <a-plane
-          position="-3.68 0.98 1.32"
-          rotation="0 76 0"
-          width="1.05"
-          height="1.48"
-          material="shader: flat; color: #180c13; opacity: 0.07; transparent: true; side: double"
-        ></a-plane>
-        <a-plane
-          position="3.72 0.98 -1.24"
-          rotation="0 -74 0"
-          width="1.05"
-          height="1.48"
-          material="shader: flat; color: #0b1513; opacity: 0.06; transparent: true; side: double"
-        ></a-plane>
-        <a-plane
-          position="3.68 1.02 1.18"
-          rotation="0 -74 0"
-          width="1.15"
-          height="1.62"
-          material="shader: flat; color: #0b1513; opacity: 0.08; transparent: true; side: double"
-        ></a-plane>
+        <!-- Arrival zone is a pause in the path, not a doorway; no vertical scrims cross the center route. -->
         <a-box
           position="0 3.05 -1.28"
           width="4.8"
@@ -1899,7 +1753,7 @@
             animation__drift="property: rotation; to: 436 0 -18; dur: 61000; easing: linear; loop: true"
           ></a-ring>
           <a-box
-            class="dance-responsive-ribbon"
+            class="dance-hanging-ribbon"
             position="-2.4 3.35 -0.9"
             rotation="0 22 4"
             width="0.055"
@@ -1908,7 +1762,7 @@
             material="color: #120910; emissive: #ff8fd2; emissiveIntensity: 0.28; opacity: 0.48; transparent: true; metalness: 0.24; roughness: 0.32"
           ></a-box>
           <a-box
-            class="dance-responsive-ribbon"
+            class="dance-hanging-ribbon"
             position="-0.8 3.72 2.25"
             rotation="0 -18 -5"
             width="0.05"
@@ -1917,7 +1771,7 @@
             material="color: #0b1512; emissive: #8ef0c6; emissiveIntensity: 0.24; opacity: 0.42; transparent: true; metalness: 0.22; roughness: 0.34"
           ></a-box>
           <a-box
-            class="dance-responsive-ribbon"
+            class="dance-hanging-ribbon"
             position="1.85 3.55 -2.15"
             rotation="0 -32 6"
             width="0.055"
@@ -1926,7 +1780,7 @@
             material="color: #17100b; emissive: #ffbd78; emissiveIntensity: 0.25; opacity: 0.44; transparent: true; metalness: 0.22; roughness: 0.34"
           ></a-box>
           <a-box
-            class="dance-responsive-ribbon"
+            class="dance-hanging-ribbon"
             position="2.65 3.22 1.35"
             rotation="0 16 -4"
             width="0.05"
@@ -1948,23 +1802,8 @@
         ></a-ring>
         <a-entity
           id="dance-step-light"
-          position="0 1.05 0"
-          light="type: point; color: #ff9fba; intensity: 0.05; distance: 5.8"
-        ></a-entity>
-        <a-cylinder
-          id="dance-vertical-pulse"
-          position="0 1.62 0"
-          radius="0.18"
-          height="3.1"
-          segments-radial="24"
-          open-ended="true"
-          visible="false"
-          material="color: #ffbd78; emissive: #ff8fd2; emissiveIntensity: 0.42; opacity: 0; transparent: true; side: double"
-        ></a-cylinder>
-        <a-entity
-          id="dance-overhead-response-light"
-          position="0 4.1 0"
-          light="type: point; color: #ffb1d4; intensity: 0.03; distance: 7.2"
+          position="0 0.32 0"
+          light="type: point; color: #ff9fba; intensity: 0.04; distance: 3.2"
         ></a-entity>
 
         <a-entity id="dance-projects"></a-entity>

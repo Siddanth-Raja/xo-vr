@@ -316,6 +316,116 @@
         { start: "1.15 0.112 15.15", end: "1.15 0.112 21.35", color: "#2f78bd", opacity: 0.24 },
       ];
 
+      const BRANCH_NAV_CUES = [
+        {
+          id: "dance",
+          label: "Dance",
+          colors: {
+            trail: "#ff8fd2",
+            secondary: "#8ef0c6",
+            threshold: "#ffbd78",
+            anchor: "#ff6aa8",
+          },
+          trail: [
+            { start: "-1.9 0.145 -0.25", end: "-4.1 0.145 -0.72", width: 0.035, opacity: 0.28 },
+            { start: "-4.1 0.145 -0.72", end: "-6.15 0.145 -1.05", width: 0.044, opacity: 0.34 },
+            { start: "-6.15 0.145 -1.05", end: "-8.75 0.145 -2.4", width: 0.035, opacity: 0.24 },
+          ],
+          particles: [
+            { position: "-3.2 0.38 -0.45", radius: 0.035, color: "#ff8fd2", delay: 0 },
+            { position: "-4.75 0.32 -0.82", radius: 0.028, color: "#ffbd78", delay: 260 },
+            { position: "-6.3 0.42 -1.18", radius: 0.032, color: "#8ef0c6", delay: 520 },
+          ],
+          threshold: {
+            position: "-6.15 0 -1.05",
+            rotation: "0 -39 0",
+            width: 2.25,
+            color: "#ff8fd2",
+            labelPosition: "0 1.72 -0.9",
+          },
+          anchor: {
+            position: "-18.4 1.2 -10.25",
+            rotation: "0 -24 0",
+            width: 2.6,
+            height: 2.2,
+            color: "#ff6aa8",
+            secondaryColor: "#8ef0c6",
+          },
+        },
+        {
+          id: "live-events",
+          label: "Live Events",
+          colors: {
+            trail: "#6cf0ff",
+            secondary: "#9a4cff",
+            threshold: "#ffd08a",
+            anchor: "#f0a55e",
+          },
+          trail: [
+            { start: "1.75 0.145 -0.55", end: "3.9 0.145 -1.35", width: 0.035, opacity: 0.25 },
+            { start: "3.9 0.145 -1.35", end: "6.25 0.145 -2.25", width: 0.044, opacity: 0.32 },
+            { start: "6.25 0.145 -2.25", end: "9.2 0.145 -3.05", width: 0.035, opacity: 0.24 },
+          ],
+          particles: [
+            { position: "3.25 0.34 -1.02", radius: 0.03, color: "#6cf0ff", delay: 80 },
+            { position: "4.9 0.44 -1.72", radius: 0.034, color: "#9a4cff", delay: 360 },
+            { position: "6.55 0.36 -2.28", radius: 0.028, color: "#ffd08a", delay: 680 },
+          ],
+          threshold: {
+            position: "6.25 0 -2.25",
+            rotation: "0 22 0",
+            width: 2.35,
+            color: "#6cf0ff",
+            labelPosition: "0 1.72 -0.9",
+          },
+          anchor: {
+            position: "17.7 1.25 -6.55",
+            rotation: "0 10 0",
+            width: 2.55,
+            height: 2.0,
+            color: "#6cf0ff",
+            secondaryColor: "#ffd08a",
+          },
+        },
+        {
+          id: "brand-work",
+          label: "Brand Work",
+          colors: {
+            trail: "#65b7ff",
+            secondary: "#bfe6ff",
+            threshold: "#1688ff",
+            anchor: "#83d7ff",
+          },
+          trail: [
+            { start: "0 0.145 1.85", end: "0 0.145 3.85", width: 0.034, opacity: 0.26 },
+            { start: "0 0.145 3.85", end: "0 0.145 5.75", width: 0.044, opacity: 0.34 },
+            { start: "0 0.145 5.75", end: "0 0.145 8.55", width: 0.034, opacity: 0.24 },
+          ],
+          particles: [
+            { position: "-0.42 0.32 3.05", radius: 0.026, color: "#bfe6ff", delay: 120 },
+            { position: "0.48 0.42 4.55", radius: 0.03, color: "#65b7ff", delay: 420 },
+            { position: "-0.32 0.36 6.05", radius: 0.026, color: "#83d7ff", delay: 720 },
+          ],
+          threshold: {
+            position: "0 0 5.75",
+            rotation: "0 0 0",
+            width: 2.15,
+            color: "#65b7ff",
+            labelPosition: "0 1.76 -1.08",
+          },
+          anchor: {
+            position: "0 1.35 13.9",
+            rotation: "0 0 0",
+            width: 2.7,
+            height: 2.35,
+            color: "#83d7ff",
+            secondaryColor: "#1688ff",
+          },
+        },
+      ];
+
+      const NAV_LABELS_ENABLED = false;
+
       const setMaterial = (el, values) => {
         const current = el.getAttribute("material") || {};
         el.setAttribute("material", { ...current, ...values });
@@ -1412,10 +1522,195 @@
         });
       };
 
+      const parseVector = (value) => {
+        const [x, y, z] = value.split(" ").map(Number);
+        return new THREE.Vector3(x, y, z);
+      };
+
+      const createPathStrip = (segment, color) => {
+        const start = parseVector(segment.start);
+        const end = parseVector(segment.end);
+        const midpoint = start.clone().add(end).multiplyScalar(0.5);
+        const length = start.distanceTo(end);
+        const angle = -THREE.MathUtils.radToDeg(Math.atan2(end.z - start.z, end.x - start.x));
+
+        const strip = document.createElement("a-box");
+        strip.setAttribute("position", `${midpoint.x} ${midpoint.y} ${midpoint.z}`);
+        strip.setAttribute("rotation", `0 ${angle} 0`);
+        strip.setAttribute("width", length);
+        strip.setAttribute("height", "0.018");
+        strip.setAttribute("depth", segment.width);
+        strip.setAttribute("material", {
+          color: "#05070a",
+          emissive: color,
+          emissiveIntensity: 0.58,
+          opacity: segment.opacity,
+          transparent: true,
+          metalness: 0.34,
+          roughness: 0.22,
+        });
+        return strip;
+      };
+
+      const createBranchNavigationCues = () => {
+        const navRoot = document.querySelector("#branch-navigation-cues");
+        BRANCH_NAV_CUES.forEach((branch) => {
+          const group = document.createElement("a-entity");
+          group.setAttribute("id", `${branch.id}-navigation-cues`);
+
+          branch.trail.forEach((segment, index) => {
+            group.appendChild(createPathStrip(segment, index === 1 ? branch.colors.threshold : branch.colors.trail));
+
+            const line = document.createElement("a-entity");
+            line.setAttribute("line", {
+              start: segment.start,
+              end: segment.end,
+              color: index === 1 ? branch.colors.secondary : branch.colors.trail,
+              opacity: segment.opacity + 0.08,
+            });
+            group.appendChild(line);
+          });
+
+          branch.particles.forEach((particle) => {
+            const mote = document.createElement("a-sphere");
+            mote.setAttribute("position", particle.position);
+            mote.setAttribute("radius", particle.radius);
+            mote.setAttribute("material", {
+              color: "#0a090d",
+              emissive: particle.color,
+              emissiveIntensity: 0.72,
+              opacity: 0.62,
+              transparent: true,
+              roughness: 0.34,
+            });
+            mote.setAttribute("animation__float", {
+              property: "position",
+              dir: "alternate",
+              dur: 1800 + particle.delay,
+              easing: "easeInOutSine",
+              loop: true,
+              to: particle.position.replace(/ ([\d.]+) /, (_match, y) => ` ${Number(y) + 0.18} `),
+            });
+            mote.setAttribute("animation__pulse", {
+              property: "scale",
+              from: "0.8 0.8 0.8",
+              to: "1.28 1.28 1.28",
+              dir: "alternate",
+              dur: 1400 + particle.delay,
+              easing: "easeInOutSine",
+              loop: true,
+            });
+            group.appendChild(mote);
+          });
+
+          const threshold = document.createElement("a-entity");
+          threshold.setAttribute("position", branch.threshold.position);
+          threshold.setAttribute("rotation", branch.threshold.rotation);
+
+          const thresholdGlow = document.createElement("a-ring");
+          thresholdGlow.setAttribute("position", "0 0.18 0");
+          thresholdGlow.setAttribute("rotation", "-90 0 0");
+          thresholdGlow.setAttribute("radius-inner", branch.threshold.width / 2);
+          thresholdGlow.setAttribute("radius-outer", branch.threshold.width / 2 + 0.04);
+          thresholdGlow.setAttribute("material", {
+            shader: "flat",
+            color: branch.threshold.color,
+            opacity: 0.22,
+            transparent: true,
+          });
+          thresholdGlow.setAttribute("animation__breathe", {
+            property: "scale",
+            from: "1 1 1",
+            to: "1.045 1.045 1.045",
+            dir: "alternate",
+            dur: 2100,
+            easing: "easeInOutSine",
+            loop: true,
+          });
+
+          [-1, 1].forEach((side) => {
+            const thresholdPost = document.createElement("a-box");
+            thresholdPost.setAttribute("position", `${side * (branch.threshold.width / 2)} 0.72 0`);
+            thresholdPost.setAttribute("width", "0.055");
+            thresholdPost.setAttribute("height", "1.42");
+            thresholdPost.setAttribute("depth", "0.055");
+            thresholdPost.setAttribute("material", {
+              color: "#05070b",
+              emissive: branch.colors.threshold,
+              emissiveIntensity: 0.22,
+              opacity: 0.42,
+              transparent: true,
+              metalness: 0.26,
+              roughness: 0.34,
+            });
+            threshold.appendChild(thresholdPost);
+          });
+
+          if (NAV_LABELS_ENABLED) {
+            const label = document.createElement("a-text");
+            label.setAttribute("value", branch.label);
+            label.setAttribute("position", branch.threshold.labelPosition);
+            label.setAttribute("align", "center");
+            label.setAttribute("width", "2.2");
+            label.setAttribute("color", "#e9edf2");
+            label.setAttribute("material", "shader: flat; opacity: 0.2; transparent: true");
+            label.setAttribute("billboard", "");
+            threshold.appendChild(label);
+          }
+
+          threshold.appendChild(thresholdGlow);
+          group.appendChild(threshold);
+
+          const anchor = document.createElement("a-entity");
+          anchor.setAttribute("position", branch.anchor.position);
+          anchor.setAttribute("rotation", branch.anchor.rotation);
+
+          const anchorScrim = document.createElement("a-plane");
+          anchorScrim.setAttribute("width", branch.anchor.width);
+          anchorScrim.setAttribute("height", branch.anchor.height);
+          anchorScrim.setAttribute("material", {
+            shader: "flat",
+            color: branch.anchor.color,
+            opacity: 0.075,
+            transparent: true,
+            side: "double",
+          });
+
+          const anchorSpine = document.createElement("a-box");
+          anchorSpine.setAttribute("position", "0 0 0.02");
+          anchorSpine.setAttribute("width", "0.055");
+          anchorSpine.setAttribute("height", branch.anchor.height);
+          anchorSpine.setAttribute("depth", "0.055");
+          anchorSpine.setAttribute("material", {
+            color: "#04060a",
+            emissive: branch.anchor.secondaryColor,
+            emissiveIntensity: 0.42,
+            opacity: 0.68,
+            transparent: true,
+            metalness: 0.22,
+            roughness: 0.32,
+          });
+
+          const anchorLight = document.createElement("a-entity");
+          anchorLight.setAttribute("position", "0 0.2 0.35");
+          anchorLight.setAttribute("light", {
+            type: "point",
+            color: branch.anchor.color,
+            intensity: 0.28,
+            distance: 6.8,
+          });
+
+          anchor.append(anchorScrim, anchorSpine, anchorLight);
+          group.appendChild(anchor);
+          navRoot.appendChild(group);
+        });
+      };
+
       window.addEventListener("DOMContentLoaded", () => {
         createSocialLinks();
         createNetworkLines();
         createProjectObjects();
+        createBranchNavigationCues();
         createDanceRoom();
         createLiveEventsRoom();
         createBrandWorkRoom();
@@ -1576,6 +1871,7 @@
       <a-entity id="dance-trails"></a-entity>
       <a-entity id="live-event-trails"></a-entity>
       <a-entity id="brand-trails"></a-entity>
+      <a-entity id="branch-navigation-cues"></a-entity>
 
       <!-- Safety clearance rule: the Core-to-Dance passage must stay visibly clear of core objects, especially XO Web. -->
       <a-entity id="liminal-corridor" position="-12.75 0 -5.45" rotation="0 -39 0">

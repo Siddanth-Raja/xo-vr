@@ -207,11 +207,39 @@
         dance: {
           radius: 5.8,
           movementThreshold: 0.08,
-          stepCooldownMs: 650,
+          stepCooldownMs: 920,
           baseFogDensity: 0.044,
-          activeFogDensity: 0.052,
-          baseLightIntensity: 0.1,
-          pulseLightIntensity: 0.34,
+          activeFogDensity: 0.047,
+          baseLightIntensity: 0.07,
+          pulseLightIntensity: 0.18,
+        },
+      };
+
+      const ROOM_REACTIVITY_CONFIG = {
+        easing: 0.00055,
+        movementEasing: 0.0012,
+        dormantFloor: 0.035,
+        rooms: {
+          core: {
+            center: new THREE.Vector3(0, 0, 0),
+            radius: 6.2,
+            fullRadius: 2.45,
+          },
+          dance: {
+            center: new THREE.Vector3(-24.2, 0, -14.2),
+            radius: 6.1,
+            fullRadius: 2.4,
+          },
+          live: {
+            center: new THREE.Vector3(21.5, 0, -7.75),
+            radius: 6.3,
+            fullRadius: 2.45,
+          },
+          brand: {
+            center: new THREE.Vector3(0, 0, 18.25),
+            radius: 7.0,
+            fullRadius: 2.7,
+          },
         },
       };
 
@@ -428,7 +456,55 @@
 
       const setMaterial = (el, values) => {
         const current = el.getAttribute("material") || {};
-        el.setAttribute("material", { ...current, ...values });
+        const attributeValues = { ...values };
+        const emissiveIntensity = attributeValues.emissiveIntensity;
+        delete attributeValues.emissiveIntensity;
+
+        if (Object.keys(attributeValues).length) {
+          el.setAttribute("material", { ...current, ...attributeValues });
+        }
+
+        if (emissiveIntensity !== undefined) {
+          el.object3D.traverse((node) => {
+            const nodeMaterials = Array.isArray(node.material)
+              ? node.material
+              : node.material
+                ? [node.material]
+                : [];
+            nodeMaterials.forEach((material) => {
+              if ("emissiveIntensity" in material) {
+                material.emissiveIntensity = emissiveIntensity;
+                material.needsUpdate = true;
+              }
+            });
+          });
+        }
+      };
+
+      const horizontalDistance = (a, b) => {
+        const dx = a.x - b.x;
+        const dz = a.z - b.z;
+        return Math.sqrt(dx * dx + dz * dz);
+      };
+
+      const proximityAmount = (position, room) => {
+        const range = room.radius - room.fullRadius;
+        const raw = THREE.MathUtils.clamp(
+          (room.radius - horizontalDistance(position, room.center)) / range,
+          0,
+          1,
+        );
+        return raw * raw * (3 - 2 * raw);
+      };
+
+      const dampValue = (current, target, delta, easing = ROOM_REACTIVITY_CONFIG.easing) => {
+        const alpha = 1 - Math.exp(-delta * easing);
+        return THREE.MathUtils.lerp(current, target, alpha);
+      };
+
+      const materialNumber = (el, key, fallback) => {
+        const value = Number(el.dataset[key]);
+        return Number.isFinite(value) ? value : fallback;
       };
 
       AFRAME.registerComponent("billboard", {
@@ -495,42 +571,108 @@
           this.el.addEventListener("mouseleave", () => this.setActive(false));
         },
         tick(time) {
-          const pulse = 1 + Math.sin(time * 0.0028) * 0.12;
+          const pulse = 1 + Math.sin(time * 0.0016) * 0.035;
           const presence = this.el.sceneEl.components["core-presence"];
           const proximityBoost = presence?.boost || 0;
           if (this.coreLight) {
             this.coreLight.setAttribute(
               "light",
               "intensity",
-              (this.baseIntensity + proximityBoost * 0.58) * pulse,
+              (this.baseIntensity + proximityBoost * 0.28) * pulse,
             );
           }
-          if (this.coreAura) this.coreAura.object3D.scale.setScalar(1.05 + Math.sin(time * 0.0018) * 0.035);
-          if (this.outerAura) this.outerAura.object3D.scale.setScalar(1.02 + Math.sin(time * 0.0012) * 0.025);
+          if (this.coreAura) this.coreAura.object3D.scale.setScalar(1.05 + Math.sin(time * 0.0011) * 0.018);
+          if (this.outerAura) this.outerAura.object3D.scale.setScalar(1.02 + Math.sin(time * 0.0008) * 0.012);
         },
         setActive(active) {
           this.isActive = active;
-          this.socialOrbit.setAttribute("visible", active);
+          const presence = this.el.sceneEl.components["core-presence"];
+          const proximityVisible = (presence?.boost || 0) > 0.08;
+          this.socialOrbit.setAttribute("visible", active || proximityVisible);
           this.socialOrbit.setAttribute("animation__fade", {
             property: "scale",
-            to: active ? "1 1 1" : "0.001 0.001 0.001",
-            dur: 260,
-            easing: "easeOutQuad",
+            to: active ? "1 1 1" : proximityVisible ? "0.72 0.72 0.72" : "0.001 0.001 0.001",
+            dur: 900,
+            easing: "easeInOutSine",
           });
           setMaterial(this.el, {
-            emissiveIntensity: active ? 1.95 : 1.16,
-            color: active ? "#ff2f35" : "#b40712",
+            emissiveIntensity: active ? 1.42 : 1.16,
+            color: active ? "#ce1821" : "#b40712",
           });
           if (this.coreAura) {
             setMaterial(this.coreAura, {
-              opacity: active ? 0.28 : 0.14,
+              opacity: active ? 0.19 : 0.14,
             });
           }
           if (this.outerAura) {
             setMaterial(this.outerAura, {
-              opacity: active ? 0.16 : 0.075,
+              opacity: active ? 0.1 : 0.075,
             });
           }
+        },
+      });
+
+      AFRAME.registerComponent("environmental-reactivity", {
+        init() {
+          this.cameraPosition = new THREE.Vector3();
+          this.previousPosition = new THREE.Vector3();
+          this.hasPreviousPosition = false;
+          this.rooms = Object.fromEntries(
+            Object.keys(ROOM_REACTIVITY_CONFIG.rooms).map((name) => [name, 0]),
+          );
+          this.rawRooms = { ...this.rooms };
+          this.activeRoom = null;
+          this.movement = 0;
+        },
+        tick(_time, delta) {
+          const camera = this.el.camera;
+          if (!camera) return;
+
+          camera.el.object3D.getWorldPosition(this.cameraPosition);
+
+          let activeRoom = null;
+          let strongestPresence = ROOM_REACTIVITY_CONFIG.dormantFloor;
+          Object.entries(ROOM_REACTIVITY_CONFIG.rooms).forEach(([name, room]) => {
+            const presence = proximityAmount(this.cameraPosition, room);
+            this.rawRooms[name] = presence;
+            if (presence > strongestPresence) {
+              strongestPresence = presence;
+              activeRoom = name;
+            }
+          });
+
+          this.activeRoom = activeRoom;
+          Object.keys(this.rooms).forEach((name) => {
+            const target = name === activeRoom ? this.rawRooms[name] : 0;
+            this.rooms[name] = dampValue(this.rooms[name], target, delta);
+          });
+
+          if (!this.hasPreviousPosition) {
+            this.previousPosition.copy(this.cameraPosition);
+            this.hasPreviousPosition = true;
+            return;
+          }
+
+          const movementX = this.cameraPosition.x - this.previousPosition.x;
+          const movementZ = this.cameraPosition.z - this.previousPosition.z;
+          const movement = Math.sqrt(movementX * movementX + movementZ * movementZ);
+          const movementTarget =
+            activeRoom === "dance"
+              ? THREE.MathUtils.clamp((movement - 0.015) / 0.16, 0, 1)
+              : 0;
+          this.movement = dampValue(
+            this.movement,
+            movementTarget,
+            delta,
+            ROOM_REACTIVITY_CONFIG.movementEasing,
+          );
+          this.previousPosition.copy(this.cameraPosition);
+        },
+        getRoomPresence(name) {
+          return this.rooms[name] || 0;
+        },
+        isActiveRoom(name) {
+          return this.activeRoom === name;
         },
       });
 
@@ -548,10 +690,13 @@
           this.networkLines = [];
           this.overheadLines = [];
           this.overheadFragments = [];
+          this.coreObjects = [];
+          this.socialDetails = [];
           this.cameraPosition = new THREE.Vector3();
+          this.objectPosition = new THREE.Vector3();
           this.boost = 0;
         },
-        tick() {
+        tick(_time, delta) {
           const camera = this.el.camera;
           if (!camera) return;
 
@@ -568,8 +713,15 @@
           if (!this.overheadFragments.length) {
             this.overheadFragments = [...document.querySelectorAll(".core-overhead-fragment")];
           }
+          if (!this.coreObjects.length) {
+            this.coreObjects = [...document.querySelectorAll(".core-symbol")];
+          }
+          if (!this.socialDetails.length) {
+            this.socialDetails = [...document.querySelectorAll(".core-social-detail")];
+          }
 
           camera.el.object3D.getWorldPosition(this.cameraPosition);
+          const roomReactivity = this.el.components["environmental-reactivity"];
           const distance = this.cameraPosition.distanceTo(INTERACTION_CONFIG.core.center);
           const range = this.data.activationRadius - this.data.fullIntensityRadius;
           const rawBoost = THREE.MathUtils.clamp(
@@ -577,14 +729,17 @@
             0,
             1,
           );
-          this.boost = rawBoost * rawBoost;
+          const targetBoost = roomReactivity
+            ? roomReactivity.getRoomPresence("core")
+            : rawBoost * rawBoost;
+          this.boost = dampValue(this.boost, targetBoost, delta, 0.00045);
 
           if (this.coreAura) {
             const hoverBoost = this.heartbeatCore?.components["heartbeat-core"]?.isActive ? 1 : 0;
             setMaterial(this.coreAura, {
               opacity:
-                INTERACTION_CONFIG.core.baseAuraOpacity + this.boost * 0.09 + hoverBoost * 0.05,
-              emissiveIntensity: 0.58 + this.boost * 0.28,
+                INTERACTION_CONFIG.core.baseAuraOpacity + this.boost * 0.028 + hoverBoost * 0.035,
+              emissiveIntensity: 0.55 + this.boost * 0.1,
             });
           }
 
@@ -593,9 +748,9 @@
             setMaterial(this.outerAura, {
               opacity:
                 INTERACTION_CONFIG.core.baseOuterAuraOpacity +
-                this.boost * 0.05 +
-                hoverBoost * 0.035,
-              emissiveIntensity: 0.42 + this.boost * 0.18,
+                this.boost * 0.015 +
+                hoverBoost * 0.02,
+              emissiveIntensity: 0.32 + this.boost * 0.06,
             });
           }
 
@@ -605,7 +760,7 @@
               Number(line.dataset.baseOpacity) || INTERACTION_CONFIG.core.baseNetworkOpacity;
             line.setAttribute("line", {
               ...currentLine,
-              opacity: baseOpacity + this.boost * 0.24,
+              opacity: baseOpacity + this.boost * 0.07,
             });
           });
 
@@ -614,19 +769,48 @@
             const baseOpacity = Number(line.dataset.baseOpacity) || 0.18;
             line.setAttribute("line", {
               ...currentLine,
-              opacity: baseOpacity + this.boost * 0.18,
+              opacity: baseOpacity + this.boost * 0.035,
             });
           });
 
           this.overheadFragments.forEach((fragment) => {
             setMaterial(fragment, {
-              emissiveIntensity: Number(fragment.dataset.baseEmissive || 0.18) + this.boost * 0.28,
-              opacity: Number(fragment.dataset.baseOpacity || 0.34) + this.boost * 0.08,
+              emissiveIntensity: materialNumber(fragment, "baseEmissive", 0.18) + this.boost * 0.04,
+              opacity: materialNumber(fragment, "baseOpacity", 0.34) + this.boost * 0.025,
+            });
+          });
+
+          this.coreObjects.forEach((object) => {
+            object.object3D.getWorldPosition(this.objectPosition);
+            const near = THREE.MathUtils.clamp(
+              (4.8 - this.cameraPosition.distanceTo(this.objectPosition)) / 3.2,
+              0,
+              1,
+            );
+            const localBoost = this.boost * (0.45 + near * 0.55);
+            setMaterial(object, {
+              emissiveIntensity: materialNumber(object, "baseEmissive", 0.24) + localBoost * 0.045,
             });
           });
 
           if (this.socialOrbit) {
-            this.socialOrbit.dataset.ready = this.boost > 0.18 ? "true" : "false";
+            const hoverBoost = this.heartbeatCore?.components["heartbeat-core"]?.isActive ? 1 : 0;
+            const visible = this.boost > 0.08 || hoverBoost > 0;
+            this.socialOrbit.setAttribute("visible", visible);
+            if (!hoverBoost) {
+              const scale = THREE.MathUtils.lerp(0.001, 0.72, this.boost);
+              this.socialOrbit.object3D.scale.setScalar(scale);
+            }
+            this.socialDetails.forEach((detail) => {
+              const currentMaterial = detail.getAttribute("material") || {};
+              detail.setAttribute("material", {
+                ...currentMaterial,
+                opacity:
+                  materialNumber(detail, "baseOpacity", 0.5) +
+                  this.boost * materialNumber(detail, "opacityLift", 0.08),
+              });
+            });
+            this.socialOrbit.dataset.ready = visible ? "true" : "false";
           }
         },
       });
@@ -645,10 +829,15 @@
           this.previousPosition = new THREE.Vector3();
           this.anchorPosition = new THREE.Vector3();
           this.localStepPosition = new THREE.Vector3();
+          this.localCameraPosition = new THREE.Vector3();
           this.hasPreviousPosition = false;
           this.lastStepTime = 0;
           this.insideDanceRoom = false;
           this.pulseListenerBound = false;
+          this.floorRings = [];
+          this.danceObjects = [];
+          this.reflectionLights = [];
+          this.hangingRibbons = [];
 
           if (this.pulse) {
             this.pulseListenerBound = true;
@@ -662,6 +851,10 @@
           if (!this.anchor) this.anchor = document.querySelector("#dance-room-anchor");
           if (!this.pulse) this.pulse = document.querySelector("#dance-step-pulse");
           if (!this.pulseLight) this.pulseLight = document.querySelector("#dance-step-light");
+          if (!this.floorRings.length) this.floorRings = [...document.querySelectorAll(".dance-floor-ring")];
+          if (!this.danceObjects.length) this.danceObjects = [...document.querySelectorAll(".dance-object")];
+          if (!this.reflectionLights.length) this.reflectionLights = [...document.querySelectorAll(".dance-reflection-light")];
+          if (!this.hangingRibbons.length) this.hangingRibbons = [...document.querySelectorAll(".dance-hanging-ribbon")];
           if (this.pulse && !this.pulseListenerBound) {
             this.pulseListenerBound = true;
             this.pulse.addEventListener("animationcomplete__fade", () => {
@@ -672,16 +865,21 @@
 
           camera.el.object3D.getWorldPosition(this.cameraPosition);
           this.anchor.object3D.getWorldPosition(this.anchorPosition);
+          const roomReactivity = this.el.components["environmental-reactivity"];
+          const roomPresence = roomReactivity?.getRoomPresence("dance") ?? 0;
+          const movementPresence = roomReactivity?.movement ?? 0;
 
           const dx = this.cameraPosition.x - this.anchorPosition.x;
           const dz = this.cameraPosition.z - this.anchorPosition.z;
           const distanceFromDanceCenter = Math.sqrt(dx * dx + dz * dz);
-          const inside = distanceFromDanceCenter <= this.data.radius;
+          const inside = roomReactivity
+            ? roomReactivity.isActiveRoom("dance") && roomPresence > 0.04
+            : distanceFromDanceCenter <= this.data.radius;
 
           if (inside !== this.insideDanceRoom) {
             this.insideDanceRoom = inside;
-            this.setDancePresence(inside);
           }
+          this.setDancePresence(roomPresence, movementPresence);
 
           if (!this.hasPreviousPosition) {
             this.previousPosition.copy(this.cameraPosition);
@@ -704,58 +902,99 @@
 
           this.previousPosition.copy(this.cameraPosition);
         },
-        setDancePresence(active) {
+        setDancePresence(roomPresence, movementPresence) {
+          const active = roomPresence > 0.04;
           this.el.setAttribute("fog", {
             ...(this.el.getAttribute("fog") || {}),
-            density: active
-              ? INTERACTION_CONFIG.dance.activeFogDensity
-              : INTERACTION_CONFIG.dance.baseFogDensity,
+            density:
+              INTERACTION_CONFIG.dance.baseFogDensity +
+              roomPresence * 0.001 +
+              movementPresence * 0.002,
           });
 
           if (this.pulseLight) {
             this.pulseLight.setAttribute(
               "light",
               "intensity",
-              active ? INTERACTION_CONFIG.dance.baseLightIntensity : 0.05,
+              active ? INTERACTION_CONFIG.dance.baseLightIntensity + movementPresence * 0.035 : 0.035,
             );
           }
+
+          this.localCameraPosition.copy(this.cameraPosition);
+          this.anchor?.object3D.worldToLocal(this.localCameraPosition);
+          const localRadius = Math.sqrt(
+            this.localCameraPosition.x * this.localCameraPosition.x +
+              this.localCameraPosition.z * this.localCameraPosition.z,
+          );
+
+          this.floorRings.forEach((ring) => {
+            const ringRadius = materialNumber(ring, "ringRadius", 1.6);
+            const baseOpacity = materialNumber(ring, "baseOpacity", 0.2);
+            const nearness = THREE.MathUtils.clamp((1.2 - Math.abs(localRadius - ringRadius)) / 1.2, 0, 1);
+            const lift = roomPresence * 0.018 + movementPresence * nearness * 0.045;
+            setMaterial(ring, { opacity: baseOpacity + lift });
+            ring.object3D.scale.setScalar(1 + movementPresence * nearness * 0.018);
+          });
+
+          this.danceObjects.forEach((object) => {
+            const lift = roomPresence * 0.025 + movementPresence * 0.035;
+            setMaterial(object, {
+              emissiveIntensity: materialNumber(object, "baseEmissive", 0.34) + lift,
+            });
+          });
+
+          this.hangingRibbons.forEach((ribbon) => {
+            setMaterial(ribbon, {
+              opacity: materialNumber(ribbon, "baseOpacity", 0.42) + movementPresence * 0.035,
+              emissiveIntensity:
+                materialNumber(ribbon, "baseEmissive", 0.24) + movementPresence * 0.035,
+            });
+          });
+
+          this.reflectionLights.forEach((light) => {
+            light.setAttribute(
+              "light",
+              "intensity",
+              materialNumber(light, "baseIntensity", 0.4) + roomPresence * 0.025 + movementPresence * 0.055,
+            );
+          });
         },
         triggerStepPulse() {
           if (!this.pulse || !this.anchor) return;
 
           this.localStepPosition.copy(this.cameraPosition);
           this.anchor.object3D.worldToLocal(this.localStepPosition);
-          this.pulse.object3D.position.set(this.localStepPosition.x, 0.24, this.localStepPosition.z);
+          this.pulse.object3D.position.set(this.localStepPosition.x, 0.18, this.localStepPosition.z);
           this.pulse.setAttribute("visible", "true");
-          this.pulse.setAttribute("scale", "0.24 0.24 0.24");
+          this.pulse.setAttribute("scale", "0.34 0.34 0.34");
           this.pulse.removeAttribute("animation__expand");
           this.pulse.removeAttribute("animation__fade");
           this.pulse.setAttribute("material", {
             shader: "flat",
             color: "#ffbd78",
-            opacity: 0.24,
+            opacity: 0.16,
             transparent: true,
             side: "double",
           });
           this.pulse.setAttribute("animation__expand", {
             property: "scale",
-            from: "0.24 0.24 0.24",
-            to: "1.38 1.38 1.38",
-            dur: 620,
-            easing: "easeOutQuad",
+            from: "0.34 0.34 0.34",
+            to: "1.85 1.85 1.85",
+            dur: 1500,
+            easing: "easeOutSine",
           });
           this.pulse.setAttribute("animation__fade", {
             property: "material.opacity",
-            from: 0.24,
+            from: 0.16,
             to: 0,
-            dur: 620,
-            easing: "easeOutQuad",
+            dur: 1650,
+            easing: "easeOutSine",
           });
 
           if (this.pulseLight) {
             this.pulseLight.object3D.position.set(
               this.localStepPosition.x,
-              0.32,
+              0.22,
               this.localStepPosition.z,
             );
             this.pulseLight.removeAttribute("animation__step");
@@ -767,10 +1006,218 @@
             this.pulseLight.setAttribute("animation__step", {
               property: "light.intensity",
               to: INTERACTION_CONFIG.dance.baseLightIntensity,
-              dur: 760,
-              easing: "easeOutQuad",
+              dur: 1700,
+              easing: "easeOutSine",
             });
           }
+        },
+      });
+
+      AFRAME.registerComponent("live-events-room-response", {
+        init() {
+          this.cameraPosition = new THREE.Vector3();
+          this.objectPosition = new THREE.Vector3();
+          this.liveObjects = [];
+          this.crowdMarkers = [];
+          this.raveBeams = [];
+          this.roomBeams = [];
+          this.steamRibbons = [];
+          this.objectAuras = [];
+          this.roomRings = [];
+          this.roomLights = [];
+        },
+        tick(time) {
+          const camera = this.el.camera;
+          if (!camera) return;
+
+          if (!this.liveObjects.length) this.liveObjects = [...document.querySelectorAll(".live-object")];
+          if (!this.crowdMarkers.length) this.crowdMarkers = [...document.querySelectorAll(".live-crowd-marker")];
+          if (!this.raveBeams.length) this.raveBeams = [...document.querySelectorAll(".live-rave-beam")];
+          if (!this.roomBeams.length) this.roomBeams = [...document.querySelectorAll(".live-room-beam")];
+          if (!this.steamRibbons.length) this.steamRibbons = [...document.querySelectorAll(".live-steam-ribbon")];
+          if (!this.objectAuras.length) this.objectAuras = [...document.querySelectorAll(".live-object-aura")];
+          if (!this.roomRings.length) this.roomRings = [...document.querySelectorAll(".live-room-ring")];
+          if (!this.roomLights.length) this.roomLights = [...document.querySelectorAll(".live-room-light")];
+
+          camera.el.object3D.getWorldPosition(this.cameraPosition);
+          const roomReactivity = this.el.components["environmental-reactivity"];
+          const presence = roomReactivity?.getRoomPresence("live") ?? 0;
+          const ambient = presence * (0.74 + Math.sin(time * 0.00038) * 0.08);
+          let nearestDetail = null;
+          let nearestAmount = 0;
+
+          this.liveObjects.forEach((object) => {
+            object.object3D.getWorldPosition(this.objectPosition);
+            const near = THREE.MathUtils.clamp(
+              (4.25 - this.cameraPosition.distanceTo(this.objectPosition)) / 3.15,
+              0,
+              1,
+            );
+            if (near > nearestAmount) {
+              nearestAmount = near;
+              nearestDetail = object.dataset.detail;
+            }
+            setMaterial(object, {
+              emissiveIntensity:
+                materialNumber(object, "baseEmissive", 0.38) + presence * 0.035 + near * presence * 0.035,
+            });
+          });
+
+          this.crowdMarkers.forEach((marker, index) => {
+            const phase = 0.5 + Math.sin(time * 0.0007 + index * 0.7) * 0.5;
+            setMaterial(marker, {
+              emissiveIntensity:
+                materialNumber(marker, "baseEmissive", 0.44) + ambient * 0.045 + phase * presence * 0.025,
+            });
+          });
+
+          this.raveBeams.forEach((beam) => {
+            const near = nearestDetail === "rave" ? nearestAmount : 0;
+            setMaterial(beam, {
+              opacity: materialNumber(beam, "baseOpacity", 0.12) + ambient * 0.025 + near * presence * 0.025,
+            });
+          });
+
+          this.roomBeams.forEach((beam) => {
+            const near = nearestDetail === "rave" ? nearestAmount : 0;
+            setMaterial(beam, {
+              emissiveIntensity:
+                materialNumber(beam, "baseEmissive", 0.32) + ambient * 0.045 + near * presence * 0.035,
+            });
+          });
+
+          this.steamRibbons.forEach((ribbon) => {
+            const near = nearestDetail === "coffee" ? nearestAmount : 0;
+            setMaterial(ribbon, {
+              opacity: materialNumber(ribbon, "baseOpacity", 0.15) + ambient * 0.025 + near * presence * 0.04,
+            });
+          });
+
+          this.objectAuras.forEach((aura) => {
+            const near = aura.dataset.detail === nearestDetail ? nearestAmount : 0;
+            setMaterial(aura, {
+              opacity: materialNumber(aura, "baseOpacity", 0.08) + ambient * 0.02 + near * presence * 0.045,
+            });
+          });
+
+          this.roomRings.forEach((ring) => {
+            setMaterial(ring, {
+              opacity: materialNumber(ring, "baseOpacity", 0.18) + ambient * 0.025,
+            });
+          });
+
+          this.roomLights.forEach((light) => {
+            light.setAttribute(
+              "light",
+              "intensity",
+              materialNumber(light, "baseIntensity", 0.48) + ambient * 0.055,
+            );
+          });
+        },
+      });
+
+      AFRAME.registerComponent("brand-room-response", {
+        init() {
+          this.cameraPosition = new THREE.Vector3();
+          this.objectPosition = new THREE.Vector3();
+          this.brandObjects = [];
+          this.columns = [];
+          this.columnGlows = [];
+          this.scanLines = [];
+          this.ceilingLights = [];
+          this.ceilingAccents = [];
+          this.sheens = [];
+          this.focalElements = [];
+        },
+        tick(time) {
+          const camera = this.el.camera;
+          if (!camera) return;
+
+          if (!this.brandObjects.length) this.brandObjects = [...document.querySelectorAll(".brand-object")];
+          if (!this.columns.length) this.columns = [...document.querySelectorAll(".brand-column")];
+          if (!this.columnGlows.length) this.columnGlows = [...document.querySelectorAll(".brand-column-glow")];
+          if (!this.scanLines.length) this.scanLines = [...document.querySelectorAll(".brand-scan-line")];
+          if (!this.ceilingLights.length) this.ceilingLights = [...document.querySelectorAll(".brand-ceiling-light")];
+          if (!this.ceilingAccents.length) this.ceilingAccents = [...document.querySelectorAll(".brand-ceiling-accent")];
+          if (!this.sheens.length) this.sheens = [...document.querySelectorAll(".brand-architectural-sheen")];
+          if (!this.focalElements.length) this.focalElements = [...document.querySelectorAll(".brand-focal-element")];
+
+          camera.el.object3D.getWorldPosition(this.cameraPosition);
+          const roomReactivity = this.el.components["environmental-reactivity"];
+          const presence = roomReactivity?.getRoomPresence("brand") ?? 0;
+          let productNear = 0;
+
+          this.brandObjects.forEach((object) => {
+            object.object3D.getWorldPosition(this.objectPosition);
+            const near = THREE.MathUtils.clamp(
+              (4.8 - this.cameraPosition.distanceTo(this.objectPosition)) / 3.45,
+              0,
+              1,
+            );
+            if (object.dataset.detail === "product") productNear = near * presence;
+            setMaterial(object, {
+              emissiveIntensity:
+                materialNumber(object, "baseEmissive", 0.32) + presence * 0.025 + near * presence * 0.035,
+            });
+          });
+
+          const showroom = presence * 0.55 + productNear * 0.45;
+          const slowSheen = 0.5 + Math.sin(time * 0.00024) * 0.5;
+
+          this.scanLines.forEach((scan) => {
+            setMaterial(scan, {
+              opacity: materialNumber(scan, "baseOpacity", 0.22) + showroom * 0.055,
+            });
+          });
+
+          this.columns.forEach((column) => {
+            setMaterial(column, {
+              emissiveIntensity: materialNumber(column, "baseEmissive", 0.38) + showroom * 0.055,
+            });
+          });
+
+          this.columnGlows.forEach((glow) => {
+            setMaterial(glow, {
+              opacity: materialNumber(glow, "baseOpacity", 0.36) + showroom * 0.05,
+            });
+          });
+
+          this.ceilingLights.forEach((light) => {
+            light.setAttribute(
+              "light",
+              "intensity",
+              materialNumber(light, "baseIntensity", 0.68) + showroom * 0.09,
+            );
+          });
+
+          this.ceilingAccents.forEach((accent) => {
+            const update = {
+              emissiveIntensity:
+                materialNumber(accent, "baseEmissive", 0.28) + showroom * 0.05,
+            };
+            if (accent.dataset.baseOpacity) {
+              update.opacity = materialNumber(accent, "baseOpacity", 0.64) + showroom * 0.045;
+            }
+            setMaterial(accent, update);
+          });
+
+          this.focalElements.forEach((element) => {
+            const update = {
+              emissiveIntensity:
+                materialNumber(element, "baseEmissive", 0.32) + showroom * 0.05,
+            };
+            if (element.dataset.baseOpacity) {
+              update.opacity = materialNumber(element, "baseOpacity", 0.34) + showroom * 0.035;
+            }
+            setMaterial(element, update);
+          });
+
+          this.sheens.forEach((sheen) => {
+            setMaterial(sheen, {
+              opacity:
+                materialNumber(sheen, "baseOpacity", 0.025) + showroom * 0.025 + slowSheen * showroom * 0.012,
+            });
+          });
         },
       });
 
@@ -823,17 +1270,24 @@
           group.setAttribute("billboard", "");
 
           const halo = document.createElement("a-ring");
+          halo.setAttribute("class", "core-social-detail");
+          halo.dataset.baseOpacity = "0.38";
+          halo.dataset.opacityLift = "0.08";
           halo.setAttribute("radius-inner", "0.31");
           halo.setAttribute("radius-outer", "0.34");
           halo.setAttribute("color", "#ff8a8a");
-          halo.setAttribute("material", "shader: flat; opacity: 0.65; transparent: true");
+          halo.setAttribute("material", "shader: flat; opacity: 0.38; transparent: true");
 
           const text = document.createElement("a-text");
+          text.setAttribute("class", "core-social-detail");
+          text.dataset.baseOpacity = "0.54";
+          text.dataset.opacityLift = "0.1";
           text.setAttribute("value", link.short);
           text.setAttribute("align", "center");
           text.setAttribute("width", "2.2");
           text.setAttribute("color", "#fff2eb");
           text.setAttribute("position", "0 -0.055 0.01");
+          text.setAttribute("material", "shader: flat; opacity: 0.54; transparent: true");
           text.setAttribute("data-url", link.url);
           text.setAttribute("title", link.name);
 
@@ -882,8 +1336,8 @@
           marker.setAttribute("animation__breathe", {
             property: "scale",
             from: "1 1 1",
-            to: "1.28 1.28 1.28",
-            dur: 1800 + index * 120,
+            to: "1.12 1.12 1.12",
+            dur: 5200 + index * 180,
             dir: "alternate",
             easing: "easeInOutSine",
             loop: true,
@@ -974,7 +1428,8 @@
         const projectRoot = document.querySelector("#project-objects");
         CORE_SYMBOLS.forEach((project) => {
           const object = document.createElement("a-entity");
-          object.setAttribute("class", "interactive");
+          object.setAttribute("class", "interactive core-symbol");
+          object.dataset.baseEmissive = "0.24";
           object.setAttribute("geometry", project.geometry);
           object.setAttribute("position", project.position);
           object.setAttribute("rotation", project.rotation);
@@ -1033,9 +1488,9 @@
             marker.setAttribute("material", "color: #8ef0c6; emissive: #8ef0c6; emissiveIntensity: 0.65; roughness: 0.3");
             marker.setAttribute("animation__pulse", {
               property: "scale",
-              from: "0.88 0.88 0.88",
-              to: "1.35 1.35 1.35",
-              dur: 1500 + index * 90,
+              from: "0.96 0.96 0.96",
+              to: "1.12 1.12 1.12",
+              dur: 4200 + index * 140,
               dir: "alternate",
               easing: "easeInOutSine",
               loop: true,
@@ -1074,7 +1529,8 @@
         const danceRoot = document.querySelector("#dance-projects");
         DANCE_PROJECTS.forEach((project) => {
           const object = document.createElement("a-entity");
-          object.setAttribute("class", "interactive");
+          object.setAttribute("class", "interactive dance-object");
+          object.dataset.baseEmissive = "0.34";
           if (project.geometry) object.setAttribute("geometry", project.geometry);
           object.setAttribute("position", project.position);
           object.setAttribute("rotation", project.rotation);
@@ -1106,10 +1562,10 @@
             from: project.scale,
             to: project.scale
               .split(" ")
-              .map((value) => Number(value) * 1.035)
+              .map((value) => Number(value) * 1.012)
               .join(" "),
             dir: "alternate",
-            dur: 2100,
+            dur: 5200,
             easing: "easeInOutSine",
             loop: true,
           });
@@ -1134,15 +1590,17 @@
         if (project.detail === "rave") {
           [0, 60, 120].forEach((rotation, index) => {
             const beam = document.createElement("a-plane");
+            beam.setAttribute("class", "live-rave-beam");
+            beam.dataset.baseOpacity = "0.12";
             beam.setAttribute("width", "0.05");
             beam.setAttribute("height", "2.9");
             beam.setAttribute("position", "0 0.12 0");
             beam.setAttribute("rotation", `0 ${rotation} ${18 + index * 8}`);
-            beam.setAttribute("material", "shader: flat; color: #6cf0ff; opacity: 0.16; transparent: true; side: double");
+            beam.setAttribute("material", "shader: flat; color: #6cf0ff; opacity: 0.12; transparent: true; side: double");
             beam.setAttribute("animation__scan", {
               property: "rotation",
               to: `0 ${rotation + 360} ${18 + index * 8}`,
-              dur: 11000 + index * 1800,
+              dur: 21000 + index * 2600,
               easing: "linear",
               loop: true,
             });
@@ -1173,17 +1631,19 @@
           const steam = document.createElement("a-entity");
           [-0.2, 0, 0.2].forEach((x, index) => {
             const ribbon = document.createElement("a-plane");
+            ribbon.setAttribute("class", "live-steam-ribbon");
+            ribbon.dataset.baseOpacity = "0.15";
             ribbon.setAttribute("width", "0.035");
             ribbon.setAttribute("height", "1.05");
             ribbon.setAttribute("position", `${x} 0.9 ${index === 1 ? -0.08 : 0.02}`);
             ribbon.setAttribute("rotation", `0 ${index * 26} ${index === 1 ? -8 : 8}`);
-            ribbon.setAttribute("material", "shader: flat; color: #ffe3af; opacity: 0.18; transparent: true; side: double");
+            ribbon.setAttribute("material", "shader: flat; color: #ffe3af; opacity: 0.15; transparent: true; side: double");
             ribbon.setAttribute("animation__steam", {
               property: "position",
               from: `${x} 0.68 ${index === 1 ? -0.08 : 0.02}`,
               to: `${x + (index - 1) * 0.08} 1.18 ${index === 1 ? -0.08 : 0.02}`,
               dir: "alternate",
-              dur: 2300 + index * 300,
+              dur: 4800 + index * 500,
               easing: "easeInOutSine",
               loop: true,
             });
@@ -1213,7 +1673,9 @@
         const liveRoot = document.querySelector("#live-event-projects");
         LIVE_EVENT_PROJECTS.forEach((project) => {
           const object = document.createElement("a-entity");
-          object.setAttribute("class", "interactive");
+          object.setAttribute("class", "interactive live-object");
+          object.dataset.baseEmissive = "0.38";
+          object.dataset.detail = project.detail;
           object.setAttribute("geometry", project.geometry);
           object.setAttribute("position", project.position);
           object.setAttribute("rotation", project.rotation);
@@ -1236,27 +1698,44 @@
           object.setAttribute("animation__live", {
             property: "rotation",
             to: `${project.rotation.split(" ")[0]} ${Number(project.rotation.split(" ")[1]) + 360} ${project.rotation.split(" ")[2]}`,
-            dur: project.idleDuration,
+            dur: project.idleDuration * 1.35,
             easing: "linear",
             loop: true,
           });
           addLiveEventDetail(object, project);
+          const aura = document.createElement("a-ring");
+          aura.setAttribute("class", "live-object-aura");
+          aura.dataset.baseOpacity = "0.075";
+          aura.dataset.detail = project.detail;
+          aura.setAttribute("rotation", "-90 0 0");
+          aura.setAttribute("position", "0 -0.58 0");
+          aura.setAttribute("radius-inner", project.detail === "rave" ? "1.12" : "0.96");
+          aura.setAttribute("radius-outer", project.detail === "rave" ? "1.16" : "1");
+          aura.setAttribute("material", {
+            shader: "flat",
+            color: project.accent,
+            opacity: 0.075,
+            transparent: true,
+          });
+          object.appendChild(aura);
           liveRoot.appendChild(object);
         });
 
         const crowdRoot = document.querySelector("#live-crowd");
         LIVE_CROWD_MARKERS.forEach((marker) => {
           const body = document.createElement("a-cylinder");
+          body.setAttribute("class", "live-crowd-marker");
+          body.dataset.baseEmissive = "0.44";
           body.setAttribute("radius", "0.085");
           body.setAttribute("height", "0.48");
           body.setAttribute("position", marker.position);
           body.setAttribute("material", `color: #09090d; emissive: ${marker.color}; emissiveIntensity: 0.44; roughness: 0.5`);
           body.setAttribute("animation__presence", {
             property: "scale",
-            from: "1 0.86 1",
-            to: "1.14 1.18 1.14",
+            from: "1 0.94 1",
+            to: "1.08 1.1 1.08",
             dir: "alternate",
-            dur: 1500 + marker.delay,
+            dur: 3600 + marker.delay,
             easing: "easeInOutSine",
             loop: true,
           });
@@ -1398,16 +1877,18 @@
           });
 
           const scan = document.createElement("a-plane");
+          scan.setAttribute("class", "brand-scan-line");
+          scan.dataset.baseOpacity = "0.22";
           scan.setAttribute("width", "1.28");
           scan.setAttribute("height", "0.025");
           scan.setAttribute("position", "0 0.3 0.42");
-          scan.setAttribute("material", "shader: flat; color: #aee4ff; opacity: 0.36; transparent: true; side: double");
+          scan.setAttribute("material", "shader: flat; color: #aee4ff; opacity: 0.22; transparent: true; side: double");
           scan.setAttribute("animation__scan", {
             property: "position",
             from: "0 -0.7 0.42",
             to: "0 1.22 0.42",
             dir: "alternate",
-            dur: 3600,
+            dur: 11800,
             easing: "easeInOutSine",
             loop: true,
           });
@@ -1452,6 +1933,8 @@
         const columnRoot = document.querySelector("#brand-columns");
         BRAND_COLUMNS.forEach((column) => {
           const body = document.createElement("a-box");
+          body.setAttribute("class", "brand-column");
+          body.dataset.baseEmissive = "0.38";
           body.setAttribute("position", column.position);
           body.setAttribute("width", "0.44");
           body.setAttribute("height", column.height);
@@ -1466,11 +1949,13 @@
           body.setAttribute("shadow", "cast: true; receive: true");
 
           const glow = document.createElement("a-plane");
+          glow.setAttribute("class", "brand-column-glow");
+          glow.dataset.baseOpacity = "0.36";
           glow.setAttribute("position", `${column.side === "left" ? 0.27 : -0.27} 0 0`);
           glow.setAttribute("rotation", `0 ${column.side === "left" ? 90 : -90} 0`);
           glow.setAttribute("width", "0.06");
           glow.setAttribute("height", column.height - 0.32);
-          glow.setAttribute("material", "shader: flat; color: #1688ff; opacity: 0.44; transparent: true; side: double");
+          glow.setAttribute("material", "shader: flat; color: #1688ff; opacity: 0.36; transparent: true; side: double");
           body.appendChild(glow);
           columnRoot.appendChild(body);
         });
@@ -1478,7 +1963,9 @@
         const brandRoot = document.querySelector("#brand-projects");
         BRAND_PROJECTS.forEach((project) => {
           const object = document.createElement("a-entity");
-          object.setAttribute("class", "interactive");
+          object.setAttribute("class", "interactive brand-object");
+          object.dataset.baseEmissive = "0.32";
+          object.dataset.detail = project.detail;
           object.setAttribute("geometry", project.geometry);
           object.setAttribute("position", project.position);
           object.setAttribute("rotation", project.rotation);
@@ -1593,10 +2080,10 @@
             });
             mote.setAttribute("animation__pulse", {
               property: "scale",
-              from: "0.8 0.8 0.8",
-              to: "1.28 1.28 1.28",
+              from: "0.92 0.92 0.92",
+              to: "1.12 1.12 1.12",
               dir: "alternate",
-              dur: 1400 + particle.delay,
+              dur: 3600 + particle.delay,
               easing: "easeInOutSine",
               loop: true,
             });
@@ -1724,8 +2211,11 @@
       renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true"
       shadow="type: pcfsoft"
       xr-mode-ui="enabled: true"
+      environmental-reactivity
       core-presence="activationRadius: 5.8; fullIntensityRadius: 2.2"
-      dance-room-response="radius: 5.8; movementThreshold: 0.08; stepCooldownMs: 650"
+      dance-room-response="radius: 5.8; movementThreshold: 0.08; stepCooldownMs: 920"
+      live-events-room-response
+      brand-room-response
     >
       <!-- Intentional dark gallery atmosphere: fog, low light, and a non-default reflective floor. -->
       <a-assets>
@@ -1759,14 +2249,20 @@
         light="type: spot; target: #dance-room-anchor; angle: 34; penumbra: 0.86; color: #ffb18a; intensity: 0.95; distance: 13"
       ></a-entity>
       <a-entity
+        class="dance-reflection-light"
+        data-base-intensity="0.50"
         position="-20.1 2.8 -11.4"
         light="type: point; color: #ff8a95; intensity: 0.5; distance: 9"
       ></a-entity>
       <a-entity
+        class="dance-reflection-light"
+        data-base-intensity="0.42"
         position="-27.2 2.6 -11.8"
         light="type: point; color: #8ef0c6; intensity: 0.42; distance: 8"
       ></a-entity>
       <a-entity
+        class="dance-reflection-light"
+        data-base-intensity="0.46"
         position="-12.75 2.6 -5.45"
         light="type: point; color: #b44a71; intensity: 0.46; distance: 8"
       ></a-entity>
@@ -1775,30 +2271,44 @@
         light="type: spot; target: #live-events-room-anchor; angle: 36; penumbra: 0.9; color: #e9f7ff; intensity: 0.78; distance: 15"
       ></a-entity>
       <a-entity
+        class="live-room-light"
+        data-base-intensity="0.48"
         position="17.4 2.6 -10.1"
         light="type: point; color: #6cf0ff; intensity: 0.48; distance: 8"
       ></a-entity>
       <a-entity
+        class="live-room-light"
+        data-base-intensity="0.58"
         position="23.4 2.5 -5.2"
         light="type: point; color: #f0a55e; intensity: 0.58; distance: 8"
       ></a-entity>
       <a-entity
+        class="live-room-light"
+        data-base-intensity="0.32"
         position="13.2 2.2 -4.8"
         light="type: point; color: #8e4f75; intensity: 0.32; distance: 7"
       ></a-entity>
       <a-entity
+        class="brand-ceiling-light"
+        data-base-intensity="0.72"
         position="0 5.8 18.25"
         light="type: spot; target: #brand-room-focal; angle: 24; penumbra: 0.88; color: #dceeff; intensity: 0.72; distance: 16; castShadow: true"
       ></a-entity>
       <a-entity
+        class="brand-ceiling-light"
+        data-base-intensity="0.68"
         position="-4.15 2.15 18.25"
         light="type: point; color: #1688ff; intensity: 0.68; distance: 8"
       ></a-entity>
       <a-entity
+        class="brand-ceiling-light"
+        data-base-intensity="0.68"
         position="4.15 2.15 18.25"
         light="type: point; color: #1688ff; intensity: 0.68; distance: 8"
       ></a-entity>
       <a-entity
+        class="brand-ceiling-light"
+        data-base-intensity="0.34"
         position="0 1.15 12.25"
         light="type: point; color: #4b93d6; intensity: 0.34; distance: 7"
       ></a-entity>
@@ -1991,27 +2501,36 @@
         ></a-cylinder>
 
         <a-ring
+          class="dance-floor-ring"
+          data-ring-radius="1.6"
+          data-base-opacity="0.30"
           position="0 0.18 0"
           rotation="-90 0 0"
           radius-inner="1.58"
           radius-outer="1.62"
-          material="shader: flat; color: #ffbd78; opacity: 0.38; transparent: true"
-          animation__pulse="property: scale; from: 1 1 1; to: 1.04 1.04 1.04; dir: alternate; dur: 1600; easing: easeInOutSine; loop: true"
+          material="shader: flat; color: #ffbd78; opacity: 0.3; transparent: true"
+          animation__pulse="property: scale; from: 1 1 1; to: 1.018 1.018 1.018; dir: alternate; dur: 5200; easing: easeInOutSine; loop: true"
         ></a-ring>
         <a-ring
+          class="dance-floor-ring"
+          data-ring-radius="2.52"
+          data-base-opacity="0.23"
           position="0 0.19 0"
           rotation="-90 0 0"
           radius-inner="2.5"
           radius-outer="2.54"
-          material="shader: flat; color: #ff6aa8; opacity: 0.28; transparent: true"
-          animation__pulse="property: scale; from: 1 1 1; to: 1.035 1.035 1.035; dir: alternate; dur: 1900; easing: easeInOutSine; loop: true"
+          material="shader: flat; color: #ff6aa8; opacity: 0.23; transparent: true"
+          animation__pulse="property: scale; from: 1 1 1; to: 1.014 1.014 1.014; dir: alternate; dur: 6100; easing: easeInOutSine; loop: true"
         ></a-ring>
         <a-ring
+          class="dance-floor-ring"
+          data-ring-radius="3.6"
+          data-base-opacity="0.17"
           position="0 0.2 0"
           rotation="-90 0 0"
           radius-inner="3.58"
           radius-outer="3.62"
-          material="shader: flat; color: #8ef0c6; opacity: 0.2; transparent: true"
+          material="shader: flat; color: #8ef0c6; opacity: 0.17; transparent: true"
         ></a-ring>
 
         <a-entity
@@ -2050,6 +2569,8 @@
           ></a-ring>
           <a-box
             class="dance-hanging-ribbon"
+            data-base-emissive="0.28"
+            data-base-opacity="0.48"
             position="-2.4 3.35 -0.9"
             rotation="0 22 4"
             width="0.055"
@@ -2059,6 +2580,8 @@
           ></a-box>
           <a-box
             class="dance-hanging-ribbon"
+            data-base-emissive="0.24"
+            data-base-opacity="0.42"
             position="-0.8 3.72 2.25"
             rotation="0 -18 -5"
             width="0.05"
@@ -2068,6 +2591,8 @@
           ></a-box>
           <a-box
             class="dance-hanging-ribbon"
+            data-base-emissive="0.25"
+            data-base-opacity="0.44"
             position="1.85 3.55 -2.15"
             rotation="0 -32 6"
             width="0.055"
@@ -2077,6 +2602,8 @@
           ></a-box>
           <a-box
             class="dance-hanging-ribbon"
+            data-base-emissive="0.20"
+            data-base-opacity="0.40"
             position="2.65 3.22 1.35"
             rotation="0 16 -4"
             width="0.05"
@@ -2208,7 +2735,7 @@
           radius-inner="1.1"
           radius-outer="1.14"
           material="shader: flat; color: #f7ddff; opacity: 0.2; transparent: true"
-          animation__pulse="property: scale; from: 1 1 1; to: 1.05 1.05 1.05; dir: alternate; dur: 1700; easing: easeInOutSine; loop: true"
+          animation__pulse="property: scale; from: 1 1 1; to: 1.018 1.018 1.018; dir: alternate; dur: 5800; easing: easeInOutSine; loop: true"
         ></a-ring>
       </a-entity>
 
@@ -2239,26 +2766,32 @@
           shadow="receive: true"
         ></a-cylinder>
         <a-ring
+          class="live-room-ring"
+          data-base-opacity="0.22"
           position="0 0.17 0"
           rotation="-90 0 0"
           radius-inner="1.22"
           radius-outer="1.27"
-          material="shader: flat; color: #f7ddff; opacity: 0.28; transparent: true"
-          animation__pulse="property: scale; from: 1 1 1; to: 1.06 1.06 1.06; dir: alternate; dur: 1320; easing: easeInOutSine; loop: true"
+          material="shader: flat; color: #f7ddff; opacity: 0.22; transparent: true"
+          animation__pulse="property: scale; from: 1 1 1; to: 1.018 1.018 1.018; dir: alternate; dur: 6200; easing: easeInOutSine; loop: true"
         ></a-ring>
         <a-ring
+          class="live-room-ring"
+          data-base-opacity="0.16"
           position="0 0.18 0"
           rotation="-90 0 0"
           radius-inner="2.42"
           radius-outer="2.46"
-          material="shader: flat; color: #6cf0ff; opacity: 0.18; transparent: true"
+          material="shader: flat; color: #6cf0ff; opacity: 0.16; transparent: true"
         ></a-ring>
         <a-ring
+          class="live-room-ring"
+          data-base-opacity="0.17"
           position="0 0.19 0"
           rotation="-90 0 0"
           radius-inner="3.54"
           radius-outer="3.58"
-          material="shader: flat; color: #ffd08a; opacity: 0.2; transparent: true"
+          material="shader: flat; color: #ffd08a; opacity: 0.17; transparent: true"
         ></a-ring>
 
         <a-entity id="live-crowd"></a-entity>
@@ -2285,22 +2818,26 @@
           material="shader: flat; color: #110d16; opacity: 0.11; transparent: true; side: double"
         ></a-plane>
         <a-box
+          class="live-room-beam"
+          data-base-emissive="0.30"
           position="-2.75 2.2 -2.1"
           rotation="0 18 -18"
           width="0.08"
           height="3.2"
           depth="0.08"
-          material="color: #04060a; emissive: #6cf0ff; emissiveIntensity: 0.42; metalness: 0.24; roughness: 0.32"
-          animation__sweep="property: rotation; from: 0 18 -18; to: 0 54 18; dir: alternate; dur: 2100; easing: easeInOutSine; loop: true"
+          material="color: #04060a; emissive: #6cf0ff; emissiveIntensity: 0.3; metalness: 0.24; roughness: 0.32"
+          animation__sweep="property: rotation; from: 0 18 -18; to: 0 38 4; dir: alternate; dur: 9200; easing: easeInOutSine; loop: true"
         ></a-box>
         <a-box
+          class="live-room-beam"
+          data-base-emissive="0.28"
           position="-1.45 2.05 -2.45"
           rotation="0 -12 16"
           width="0.07"
           height="2.65"
           depth="0.07"
-          material="color: #05040a; emissive: #9a4cff; emissiveIntensity: 0.38; metalness: 0.24; roughness: 0.32"
-          animation__sweep="property: rotation; from: 0 -12 16; to: 0 -48 -16; dir: alternate; dur: 2600; easing: easeInOutSine; loop: true"
+          material="color: #05040a; emissive: #9a4cff; emissiveIntensity: 0.28; metalness: 0.24; roughness: 0.32"
+          animation__sweep="property: rotation; from: 0 -12 16; to: 0 -30 -2; dir: alternate; dur: 11800; easing: easeInOutSine; loop: true"
         ></a-box>
         <a-box
           position="2.55 1.75 2.15"
@@ -2442,6 +2979,8 @@
           material="shader: flat; color: #04111f; opacity: 0.16; transparent: true; side: double"
         ></a-plane>
         <a-box
+          class="brand-ceiling-accent"
+          data-base-emissive="0.20"
           position="0 3.95 0"
           width="7.6"
           height="0.08"
@@ -2449,6 +2988,8 @@
           material="color: #020407; emissive: #0c315b; emissiveIntensity: 0.2; metalness: 0.24; roughness: 0.34"
         ></a-box>
         <a-box
+          class="brand-ceiling-accent"
+          data-base-emissive="0.50"
           position="-3.64 3.42 0"
           width="0.08"
           height="0.08"
@@ -2456,6 +2997,8 @@
           material="color: #04101b; emissive: #1688ff; emissiveIntensity: 0.5; metalness: 0.18; roughness: 0.28"
         ></a-box>
         <a-box
+          class="brand-ceiling-accent"
+          data-base-emissive="0.50"
           position="3.64 3.42 0"
           width="0.08"
           height="0.08"
@@ -2463,6 +3006,9 @@
           material="color: #04101b; emissive: #1688ff; emissiveIntensity: 0.5; metalness: 0.18; roughness: 0.28"
         ></a-box>
         <a-box
+          class="brand-ceiling-accent"
+          data-base-emissive="0.30"
+          data-base-opacity="0.72"
           position="0 3.72 -4.7"
           width="6.9"
           height="0.05"
@@ -2470,6 +3016,9 @@
           material="color: #03101d; emissive: #83d7ff; emissiveIntensity: 0.3; opacity: 0.72; transparent: true; metalness: 0.24; roughness: 0.24"
         ></a-box>
         <a-box
+          class="brand-ceiling-accent"
+          data-base-emissive="0.24"
+          data-base-opacity="0.64"
           position="0 3.72 4.7"
           width="6.9"
           height="0.05"
@@ -2477,6 +3026,8 @@
           material="color: #03101d; emissive: #83d7ff; emissiveIntensity: 0.24; opacity: 0.64; transparent: true; metalness: 0.24; roughness: 0.24"
         ></a-box>
         <a-plane
+          class="brand-ceiling-accent"
+          data-base-opacity="0.055"
           position="0 3.86 0"
           rotation="90 0 0"
           width="6.6"
@@ -2486,8 +3037,51 @@
 
         <a-entity id="brand-columns"></a-entity>
 
+        <a-plane
+          class="brand-architectural-sheen"
+          data-base-opacity="0.025"
+          position="-4.01 2.3 -3.6"
+          rotation="0 90 0"
+          width="0.055"
+          height="2.6"
+          material="shader: flat; color: #bfe6ff; opacity: 0.025; transparent: true; side: double"
+          animation__drift="property: position; from: -4.01 2.3 -4.65; to: -4.01 2.3 4.65; dir: alternate; dur: 28000; easing: easeInOutSine; loop: true"
+        ></a-plane>
+        <a-plane
+          class="brand-architectural-sheen"
+          data-base-opacity="0.025"
+          position="4.01 2.3 3.6"
+          rotation="0 -90 0"
+          width="0.055"
+          height="2.6"
+          material="shader: flat; color: #bfe6ff; opacity: 0.025; transparent: true; side: double"
+          animation__drift="property: position; from: 4.01 2.3 4.65; to: 4.01 2.3 -4.65; dir: alternate; dur: 28000; easing: easeInOutSine; loop: true"
+        ></a-plane>
+        <a-box
+          class="brand-architectural-sheen"
+          data-base-opacity="0.03"
+          position="-1.32 3.84 -2.6"
+          width="0.04"
+          height="0.035"
+          depth="2.4"
+          material="color: #dceeff; emissive: #83d7ff; emissiveIntensity: 0.22; opacity: 0.03; transparent: true; metalness: 0.2; roughness: 0.22"
+          animation__drift="property: position; from: -1.32 3.84 -4.2; to: -1.32 3.84 4.2; dir: alternate; dur: 32000; easing: easeInOutSine; loop: true"
+        ></a-box>
+        <a-box
+          class="brand-architectural-sheen"
+          data-base-opacity="0.03"
+          position="1.32 3.84 2.6"
+          width="0.04"
+          height="0.035"
+          depth="2.4"
+          material="color: #dceeff; emissive: #83d7ff; emissiveIntensity: 0.22; opacity: 0.03; transparent: true; metalness: 0.2; roughness: 0.22"
+          animation__drift="property: position; from: 1.32 3.84 4.2; to: 1.32 3.84 -4.2; dir: alternate; dur: 32000; easing: easeInOutSine; loop: true"
+        ></a-box>
+
         <a-cylinder
           id="brand-room-focal"
+          class="brand-focal-element"
+          data-base-emissive="0.36"
           position="0 0.16 0"
           radius="1.34"
           height="0.22"
@@ -2496,6 +3090,8 @@
           shadow="receive: true"
         ></a-cylinder>
         <a-ring
+          class="brand-focal-element"
+          data-base-opacity="0.34"
           position="0 0.3 0"
           rotation="-90 0 0"
           radius-inner="1.48"
@@ -2503,6 +3099,8 @@
           material="shader: flat; color: #8bd8ff; opacity: 0.34; transparent: true"
         ></a-ring>
         <a-box
+          class="brand-focal-element"
+          data-base-emissive="0.24"
           position="0 0.34 0"
           width="2.4"
           height="0.055"
@@ -2665,7 +3263,7 @@
           heartbeat-core
           shadow="cast: true"
           animation__rotate="property: rotation; to: 0 360 0; dur: 34000; easing: linear; loop: true"
-          animation__pulse="property: scale; from: 1 1 1; to: 1.065 1.065 1.065; dir: alternate; dur: 1650; easing: easeInOutSine; loop: true"
+          animation__pulse="property: scale; from: 1 1 1; to: 1.025 1.025 1.025; dir: alternate; dur: 4200; easing: easeInOutSine; loop: true"
         ></a-dodecahedron>
 
         <a-entity

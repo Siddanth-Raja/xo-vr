@@ -24,6 +24,217 @@
     <script type="module">
       import "aframe";
 
+      /*
+       * ==================================================
+       * CONFIG
+       * ==================================================
+       * Centralized world constants. Future rooms should start in the room
+       * registry, then add generated content and interaction hooks below.
+       */
+      const ROOM_KEYS = Object.freeze({
+        core: "core",
+        dance: "dance",
+        liveEvents: "live",
+        brandWork: "brand",
+      });
+
+      const ROOM_IDS = Object.freeze({
+        core: {
+          wrap: "core-wrap",
+          heartbeat: "heartbeat-core",
+          light: "core-light",
+          aura: "core-aura",
+          outerAura: "core-outer-aura",
+          socialOrbit: "social-orbit",
+          projectRoot: "project-objects",
+          networkRoot: "network-lines",
+        },
+        dance: {
+          anchor: "dance-room-anchor",
+          projectsRoot: "dance-projects",
+          trailsRoot: "dance-trails",
+          stepPulse: "dance-step-pulse",
+          stepLight: "dance-step-light",
+        },
+        liveEvents: {
+          anchor: "live-events-room-anchor",
+          projectsRoot: "live-event-projects",
+          trailsRoot: "live-event-trails",
+          crowdRoot: "live-crowd",
+        },
+        brandWork: {
+          anchor: "brand-work-room-anchor",
+          focal: "brand-room-focal",
+          projectsRoot: "brand-projects",
+          columnsRoot: "brand-columns",
+          trailsRoot: "brand-trails",
+        },
+        transitions: {
+          branchNavigationCuesRoot: "branch-navigation-cues",
+        },
+        hiddenSpaces: {
+          nook: "hidden-nook",
+        },
+      });
+
+      const ROOM_SELECTORS = Object.freeze({
+        core: {
+          wrap: "#core-wrap",
+          heartbeat: "#heartbeat-core",
+          light: "#core-light",
+          aura: "#core-aura",
+          outerAura: "#core-outer-aura",
+          socialOrbit: "#social-orbit",
+          projectRoot: "#project-objects",
+          networkRoot: "#network-lines",
+          networkLines: ".core-network-line",
+          overheadLines: ".core-overhead-line",
+          overheadFragments: ".core-overhead-fragment",
+          symbols: ".core-symbol",
+          socialDetails: ".core-social-detail",
+        },
+        dance: {
+          anchor: "#dance-room-anchor",
+          projectsRoot: "#dance-projects",
+          trailsRoot: "#dance-trails",
+          stepPulse: "#dance-step-pulse",
+          stepLight: "#dance-step-light",
+          floorRings: ".dance-floor-ring",
+          objects: ".dance-object",
+          reflectionLights: ".dance-reflection-light",
+          hangingRibbons: ".dance-hanging-ribbon",
+        },
+        liveEvents: {
+          anchor: "#live-events-room-anchor",
+          projectsRoot: "#live-event-projects",
+          trailsRoot: "#live-event-trails",
+          crowdRoot: "#live-crowd",
+          objects: ".live-object",
+          crowdMarkers: ".live-crowd-marker",
+          raveBeams: ".live-rave-beam",
+          roomBeams: ".live-room-beam",
+          steamRibbons: ".live-steam-ribbon",
+          objectAuras: ".live-object-aura",
+          roomRings: ".live-room-ring",
+          roomLights: ".live-room-light",
+        },
+        brandWork: {
+          anchor: "#brand-work-room-anchor",
+          projectsRoot: "#brand-projects",
+          columnsRoot: "#brand-columns",
+          trailsRoot: "#brand-trails",
+          objects: ".brand-object",
+          columns: ".brand-column",
+          columnGlows: ".brand-column-glow",
+          scanLines: ".brand-scan-line",
+          ceilingLights: ".brand-ceiling-light",
+          ceilingAccents: ".brand-ceiling-accent",
+          sheens: ".brand-architectural-sheen",
+          focalElements: ".brand-focal-element",
+        },
+        transitions: {
+          branchNavigationCuesRoot: "#branch-navigation-cues",
+        },
+      });
+
+      const ROOM_REGISTRY = Object.freeze({
+        [ROOM_KEYS.core]: {
+          label: "Core Room",
+          center: new THREE.Vector3(0, 0, 0),
+          interactionCenter: new THREE.Vector3(0, 1.55, 0),
+          radius: 6.2,
+          fullRadius: 2.45,
+        },
+        [ROOM_KEYS.dance]: {
+          label: "Dance Room",
+          center: new THREE.Vector3(-24.2, 0, -14.2),
+          radius: 6.1,
+          fullRadius: 2.4,
+        },
+        [ROOM_KEYS.liveEvents]: {
+          label: "Live Events Room",
+          center: new THREE.Vector3(21.5, 0, -7.75),
+          radius: 6.3,
+          fullRadius: 2.45,
+        },
+        [ROOM_KEYS.brandWork]: {
+          label: "Brand Work Room",
+          center: new THREE.Vector3(0, 0, 18.25),
+          radius: 7.0,
+          fullRadius: 2.7,
+        },
+      });
+
+      const COMMON_ATTRIBUTES = Object.freeze({
+        interactiveClass: "interactive",
+        projectShadow: "cast: true; receive: true",
+      });
+
+      const COMMON_MATERIALS = Object.freeze({
+        label: {
+          color: "#eee6dd",
+          material: "shader: flat; transparent: true; opacity: 0.78",
+          width: "3.7",
+        },
+      });
+
+      const INTERACTION_CONFIG = Object.freeze({
+        hover: {
+          emissiveIntensity: 0.72,
+          rotationLiftDegrees: 9,
+          defaultScale: 1.12,
+        },
+        socialOrbit: {
+          radius: 2.3,
+          revealDuration: 900,
+          activeScale: "1 1 1",
+          proximityScale: "0.72 0.72 0.72",
+          hiddenScale: "0.001 0.001 0.001",
+        },
+        secretSphere: {
+          proximityRadius: 3.2,
+          activeScale: 1.16,
+          activeEmissiveIntensity: 1.55,
+          idleEmissiveIntensity: 0.9,
+        },
+        core: {
+          center: ROOM_REGISTRY[ROOM_KEYS.core].interactionCenter,
+          activationRadius: 5.8,
+          fullIntensityRadius: 2.2,
+          baseCoreLight: 1.85,
+          baseAuraOpacity: 0.14,
+          baseOuterAuraOpacity: 0.075,
+          baseNetworkOpacity: 0.38,
+        },
+        dance: {
+          radius: 5.8,
+          movementThreshold: 0.08,
+          stepCooldownMs: 920,
+          baseFogDensity: 0.044,
+          activeFogDensity: 0.047,
+          baseLightIntensity: 0.07,
+          pulseLightIntensity: 0.18,
+        },
+      });
+
+      const ROOM_REACTIVITY_CONFIG = Object.freeze({
+        easing: 0.00055,
+        movementEasing: 0.0012,
+        dormantFloor: 0.035,
+        rooms: Object.freeze(
+          Object.fromEntries(
+            Object.entries(ROOM_REGISTRY).map(([key, room]) => [
+              key,
+              {
+                center: room.center,
+                radius: room.radius,
+                fullRadius: room.fullRadius,
+              },
+            ]),
+          ),
+        ),
+      });
+
       const SOCIAL_LINKS = [
         { name: "Instagram", short: "IG", url: "https://instagram.com", angle: 0 },
         { name: "TikTok", short: "TT", url: "https://tiktok.com", angle: 90 },
@@ -193,55 +404,6 @@
         { start: "-19.7 0.12 -11.4", end: "-22.25 0.12 -13.05", color: "#ffbd78", opacity: 0.32 },
         { start: "-19.7 0.12 -11.4", end: "-23.4 0.12 -10.8", color: "#8ef0c6", opacity: 0.26 },
       ];
-
-      const INTERACTION_CONFIG = {
-        core: {
-          center: new THREE.Vector3(0, 1.55, 0),
-          activationRadius: 5.8,
-          fullIntensityRadius: 2.2,
-          baseCoreLight: 1.85,
-          baseAuraOpacity: 0.14,
-          baseOuterAuraOpacity: 0.075,
-          baseNetworkOpacity: 0.38,
-        },
-        dance: {
-          radius: 5.8,
-          movementThreshold: 0.08,
-          stepCooldownMs: 920,
-          baseFogDensity: 0.044,
-          activeFogDensity: 0.047,
-          baseLightIntensity: 0.07,
-          pulseLightIntensity: 0.18,
-        },
-      };
-
-      const ROOM_REACTIVITY_CONFIG = {
-        easing: 0.00055,
-        movementEasing: 0.0012,
-        dormantFloor: 0.035,
-        rooms: {
-          core: {
-            center: new THREE.Vector3(0, 0, 0),
-            radius: 6.2,
-            fullRadius: 2.45,
-          },
-          dance: {
-            center: new THREE.Vector3(-24.2, 0, -14.2),
-            radius: 6.1,
-            fullRadius: 2.4,
-          },
-          live: {
-            center: new THREE.Vector3(21.5, 0, -7.75),
-            radius: 6.3,
-            fullRadius: 2.45,
-          },
-          brand: {
-            center: new THREE.Vector3(0, 0, 18.25),
-            radius: 7.0,
-            fullRadius: 2.7,
-          },
-        },
-      };
 
       const LIVE_EVENT_PROJECTS = [
         {
@@ -454,6 +616,47 @@
 
       const NAV_LABELS_ENABLED = false;
 
+      const ROOM_CONTENT = Object.freeze({
+        [ROOM_KEYS.core]: {
+          socialLinks: SOCIAL_LINKS,
+          symbols: CORE_SYMBOLS,
+          networkLines: NETWORK_LINES,
+        },
+        [ROOM_KEYS.dance]: {
+          projects: DANCE_PROJECTS,
+          trails: DANCE_TRAILS,
+        },
+        [ROOM_KEYS.liveEvents]: {
+          projects: LIVE_EVENT_PROJECTS,
+          trails: LIVE_EVENT_TRAILS,
+          crowdMarkers: LIVE_CROWD_MARKERS,
+        },
+        [ROOM_KEYS.brandWork]: {
+          projects: BRAND_PROJECTS,
+          columns: BRAND_COLUMNS,
+          trails: BRAND_TRAILS,
+        },
+      });
+
+      const TRANSITION_CONTENT = Object.freeze({
+        branchNavigationCues: BRANCH_NAV_CUES,
+        navLabelsEnabled: NAV_LABELS_ENABLED,
+      });
+
+      const FUTURE_EXTENSION_POINTS = Object.freeze({
+        roomContentLoaders: {},
+        hiddenSpaces: [ROOM_IDS.hiddenSpaces.nook],
+        spatialAudioZones: {},
+        projectMetadata: {},
+      });
+
+      /*
+       * ==================================================
+       * UTILITIES
+       * ==================================================
+       * Small helpers for DOM creation, material updates, proximity math, and
+       * generated scene elements. Keep these general before adding room code.
+       */
       const setMaterial = (el, values) => {
         const current = el.getAttribute("material") || {};
         const attributeValues = { ...values };
@@ -507,6 +710,191 @@
         return Number.isFinite(value) ? value : fallback;
       };
 
+      const setDataset = (el, dataset = {}) => {
+        Object.entries(dataset).forEach(([key, value]) => {
+          el.dataset[key] = String(value);
+        });
+      };
+
+      const applyAttributes = (el, attributes = {}) => {
+        Object.entries(attributes).forEach(([key, value]) => {
+          el.setAttribute(key, value);
+        });
+        return el;
+      };
+
+      const createElement = (tag, { className = "", dataset = {}, attributes = {} } = {}) => {
+        const el = document.createElement(tag);
+        if (className) el.setAttribute("class", className);
+        setDataset(el, dataset);
+        return applyAttributes(el, attributes);
+      };
+
+      const getRoot = (selector) => document.querySelector(selector);
+
+      const ensureElement = (target, property, selector) => {
+        if (!target[property]) target[property] = document.querySelector(selector);
+        return target[property];
+      };
+
+      const ensureCachedElements = (target, property, selector) => {
+        if (!target[property]?.length) target[property] = [...document.querySelectorAll(selector)];
+        return target[property];
+      };
+
+      const createLineEntity = ({ start, end, color, opacity, className = "", dataset = {} }) =>
+        createElement("a-entity", {
+          className,
+          dataset,
+          attributes: {
+            line: { start, end, color, opacity },
+          },
+        });
+
+      const createTextLabel = ({
+        value,
+        position,
+        width = COMMON_MATERIALS.label.width,
+        color = COMMON_MATERIALS.label.color,
+        material = COMMON_MATERIALS.label.material,
+        align = "center",
+        className = "",
+        dataset = {},
+        attributes = {},
+      }) =>
+        createElement("a-text", {
+          className,
+          dataset,
+          attributes: {
+            value,
+            align,
+            width,
+            color,
+            material,
+            ...(position ? { position } : {}),
+            ...attributes,
+          },
+        });
+
+      const createRingElement = ({
+        className = "",
+        dataset = {},
+        position,
+        rotation,
+        radiusInner,
+        radiusOuter,
+        material,
+        attributes = {},
+      }) =>
+        createElement("a-ring", {
+          className,
+          dataset,
+          attributes: {
+            ...(position ? { position } : {}),
+            ...(rotation ? { rotation } : {}),
+            "radius-inner": radiusInner,
+            "radius-outer": radiusOuter,
+            material,
+            ...attributes,
+          },
+        });
+
+      const appendTrailLines = (root, trails) => {
+        trails.forEach((trail) => {
+          root.appendChild(
+            createLineEntity({
+              start: trail.start,
+              end: trail.end,
+              color: trail.color,
+              opacity: trail.opacity,
+            }),
+          );
+        });
+      };
+
+      const rotationWithAdditionalYaw = (rotation, yawOffset) => {
+        const [x, y, z] = rotation.split(" ");
+        return `${x} ${Number(y) + yawOffset} ${z}`;
+      };
+
+      const scaledVectorString = (value, scalar) =>
+        value
+          .split(" ")
+          .map((coordinate) => Number(coordinate) * scalar)
+          .join(" ");
+
+      const createIdleRotation = (project, durationMultiplier = 1) => ({
+        property: "rotation",
+        to: rotationWithAdditionalYaw(project.rotation, 360),
+        dur: project.idleDuration * durationMultiplier,
+        easing: "linear",
+        loop: true,
+      });
+
+      const createInteractiveProjectObject = (
+        project,
+        {
+          className,
+          baseEmissive,
+          materialDefaults = {},
+          hoverScale,
+          idleAnimationName,
+          idleDurationMultiplier = 1,
+          includeDetailDataset = false,
+          forceGeometryAttribute = false,
+        },
+      ) => {
+        const object = createElement("a-entity", {
+          className: `${COMMON_ATTRIBUTES.interactiveClass} ${className}`,
+          dataset: {
+            baseEmissive,
+            ...(includeDetailDataset ? { detail: project.detail } : {}),
+          },
+          attributes: {
+            position: project.position,
+            rotation: project.rotation,
+            scale: project.scale,
+            material: {
+              color: project.color,
+              emissive: project.emissive,
+              emissiveIntensity: baseEmissive,
+              metalness: project.metalness ?? materialDefaults.metalness,
+              roughness: project.roughness ?? materialDefaults.roughness,
+            },
+            shadow: COMMON_ATTRIBUTES.projectShadow,
+          },
+        });
+
+        if (project.geometry || forceGeometryAttribute) {
+          object.setAttribute("geometry", project.geometry);
+        }
+
+        const hoverConfig = {
+          label: project.name,
+          hoverColor: project.hoverColor,
+          emissive: project.accent,
+          labelOffset: project.labelOffset,
+        };
+        if (hoverScale !== undefined) hoverConfig.hoverScale = hoverScale;
+        object.setAttribute("interactive-surface", hoverConfig);
+
+        if (idleAnimationName) {
+          object.setAttribute(
+            `animation__${idleAnimationName}`,
+            createIdleRotation(project, idleDurationMultiplier),
+          );
+        }
+
+        return object;
+      };
+
+      /*
+       * ==================================================
+       * INTERACTIONS
+       * ==================================================
+       * Components are grouped by purpose: core presence, dance movement,
+       * shared hover behavior, and room-specific environmental response.
+       */
       AFRAME.registerComponent("billboard", {
         tick() {
           const camera = this.el.sceneEl.camera;
@@ -519,7 +907,7 @@
           label: { default: "" },
           hoverColor: { default: "#ffffff" },
           emissive: { default: "#ffffff" },
-          hoverScale: { default: 1.12 },
+          hoverScale: { default: INTERACTION_CONFIG.hover.defaultScale },
           labelOffset: { default: "0 1.65 0" },
         },
         init() {
@@ -527,15 +915,14 @@
           this.homeRotation = this.el.object3D.rotation.clone();
           this.baseMaterial = { ...(this.el.getAttribute("material") || {}) };
 
-          this.label = document.createElement("a-text");
-          this.label.setAttribute("value", this.data.label);
-          this.label.setAttribute("align", "center");
-          this.label.setAttribute("width", "3.7");
-          this.label.setAttribute("color", "#eee6dd");
-          this.label.setAttribute("material", "shader: flat; transparent: true; opacity: 0.78");
-          this.label.setAttribute("position", this.data.labelOffset);
-          this.label.setAttribute("visible", "false");
-          this.label.setAttribute("billboard", "");
+          this.label = createTextLabel({
+            value: this.data.label,
+            position: this.data.labelOffset,
+            attributes: {
+              visible: "false",
+              billboard: "",
+            },
+          });
           this.el.appendChild(this.label);
 
           this.el.addEventListener("mouseenter", () => this.activate());
@@ -546,10 +933,11 @@
           setMaterial(this.el, {
             color: this.data.hoverColor,
             emissive: this.data.emissive,
-            emissiveIntensity: 0.72,
+            emissiveIntensity: INTERACTION_CONFIG.hover.emissiveIntensity,
           });
           this.el.object3D.scale.copy(this.homeScale).multiplyScalar(this.data.hoverScale);
-          this.el.object3D.rotation.y = this.homeRotation.y + THREE.MathUtils.degToRad(9);
+          this.el.object3D.rotation.y =
+            this.homeRotation.y + THREE.MathUtils.degToRad(INTERACTION_CONFIG.hover.rotationLiftDegrees);
         },
         deactivate() {
           this.label.setAttribute("visible", "false");
@@ -561,11 +949,11 @@
 
       AFRAME.registerComponent("heartbeat-core", {
         init() {
-          this.socialOrbit = document.querySelector("#social-orbit");
-          this.coreLight = document.querySelector("#core-light");
-          this.coreAura = document.querySelector("#core-aura");
-          this.outerAura = document.querySelector("#core-outer-aura");
-          this.baseIntensity = 1.85;
+          this.socialOrbit = document.querySelector(ROOM_SELECTORS.core.socialOrbit);
+          this.coreLight = document.querySelector(ROOM_SELECTORS.core.light);
+          this.coreAura = document.querySelector(ROOM_SELECTORS.core.aura);
+          this.outerAura = document.querySelector(ROOM_SELECTORS.core.outerAura);
+          this.baseIntensity = INTERACTION_CONFIG.core.baseCoreLight;
           this.isActive = false;
           this.el.addEventListener("mouseenter", () => this.setActive(true));
           this.el.addEventListener("mouseleave", () => this.setActive(false));
@@ -591,8 +979,12 @@
           this.socialOrbit.setAttribute("visible", active || proximityVisible);
           this.socialOrbit.setAttribute("animation__fade", {
             property: "scale",
-            to: active ? "1 1 1" : proximityVisible ? "0.72 0.72 0.72" : "0.001 0.001 0.001",
-            dur: 900,
+            to: active
+              ? INTERACTION_CONFIG.socialOrbit.activeScale
+              : proximityVisible
+                ? INTERACTION_CONFIG.socialOrbit.proximityScale
+                : INTERACTION_CONFIG.socialOrbit.hiddenScale,
+            dur: INTERACTION_CONFIG.socialOrbit.revealDuration,
             easing: "easeInOutSine",
           });
           setMaterial(this.el, {
@@ -601,12 +993,12 @@
           });
           if (this.coreAura) {
             setMaterial(this.coreAura, {
-              opacity: active ? 0.19 : 0.14,
+              opacity: active ? 0.19 : INTERACTION_CONFIG.core.baseAuraOpacity,
             });
           }
           if (this.outerAura) {
             setMaterial(this.outerAura, {
-              opacity: active ? 0.1 : 0.075,
+              opacity: active ? 0.1 : INTERACTION_CONFIG.core.baseOuterAuraOpacity,
             });
           }
         },
@@ -657,7 +1049,7 @@
           const movementZ = this.cameraPosition.z - this.previousPosition.z;
           const movement = Math.sqrt(movementX * movementX + movementZ * movementZ);
           const movementTarget =
-            activeRoom === "dance"
+            activeRoom === ROOM_KEYS.dance
               ? THREE.MathUtils.clamp((movement - 0.015) / 0.16, 0, 1)
               : 0;
           this.movement = dampValue(
@@ -682,11 +1074,11 @@
           fullIntensityRadius: { default: INTERACTION_CONFIG.core.fullIntensityRadius },
         },
         init() {
-          this.coreLight = document.querySelector("#core-light");
-          this.coreAura = document.querySelector("#core-aura");
-          this.outerAura = document.querySelector("#core-outer-aura");
-          this.heartbeatCore = document.querySelector("#heartbeat-core");
-          this.socialOrbit = document.querySelector("#social-orbit");
+          this.coreLight = document.querySelector(ROOM_SELECTORS.core.light);
+          this.coreAura = document.querySelector(ROOM_SELECTORS.core.aura);
+          this.outerAura = document.querySelector(ROOM_SELECTORS.core.outerAura);
+          this.heartbeatCore = document.querySelector(ROOM_SELECTORS.core.heartbeat);
+          this.socialOrbit = document.querySelector(ROOM_SELECTORS.core.socialOrbit);
           this.networkLines = [];
           this.overheadLines = [];
           this.overheadFragments = [];
@@ -700,25 +1092,15 @@
           const camera = this.el.camera;
           if (!camera) return;
 
-          if (!this.coreAura) this.coreAura = document.querySelector("#core-aura");
-          if (!this.outerAura) this.outerAura = document.querySelector("#core-outer-aura");
-          if (!this.heartbeatCore) this.heartbeatCore = document.querySelector("#heartbeat-core");
-          if (!this.socialOrbit) this.socialOrbit = document.querySelector("#social-orbit");
-          if (!this.networkLines.length) {
-            this.networkLines = [...document.querySelectorAll(".core-network-line")];
-          }
-          if (!this.overheadLines.length) {
-            this.overheadLines = [...document.querySelectorAll(".core-overhead-line")];
-          }
-          if (!this.overheadFragments.length) {
-            this.overheadFragments = [...document.querySelectorAll(".core-overhead-fragment")];
-          }
-          if (!this.coreObjects.length) {
-            this.coreObjects = [...document.querySelectorAll(".core-symbol")];
-          }
-          if (!this.socialDetails.length) {
-            this.socialDetails = [...document.querySelectorAll(".core-social-detail")];
-          }
+          ensureElement(this, "coreAura", ROOM_SELECTORS.core.aura);
+          ensureElement(this, "outerAura", ROOM_SELECTORS.core.outerAura);
+          ensureElement(this, "heartbeatCore", ROOM_SELECTORS.core.heartbeat);
+          ensureElement(this, "socialOrbit", ROOM_SELECTORS.core.socialOrbit);
+          ensureCachedElements(this, "networkLines", ROOM_SELECTORS.core.networkLines);
+          ensureCachedElements(this, "overheadLines", ROOM_SELECTORS.core.overheadLines);
+          ensureCachedElements(this, "overheadFragments", ROOM_SELECTORS.core.overheadFragments);
+          ensureCachedElements(this, "coreObjects", ROOM_SELECTORS.core.symbols);
+          ensureCachedElements(this, "socialDetails", ROOM_SELECTORS.core.socialDetails);
 
           camera.el.object3D.getWorldPosition(this.cameraPosition);
           const roomReactivity = this.el.components["environmental-reactivity"];
@@ -730,7 +1112,7 @@
             1,
           );
           const targetBoost = roomReactivity
-            ? roomReactivity.getRoomPresence("core")
+            ? roomReactivity.getRoomPresence(ROOM_KEYS.core)
             : rawBoost * rawBoost;
           this.boost = dampValue(this.boost, targetBoost, delta, 0.00045);
 
@@ -822,9 +1204,9 @@
           stepCooldownMs: { default: INTERACTION_CONFIG.dance.stepCooldownMs },
         },
         init() {
-          this.anchor = document.querySelector("#dance-room-anchor");
-          this.pulse = document.querySelector("#dance-step-pulse");
-          this.pulseLight = document.querySelector("#dance-step-light");
+          this.anchor = document.querySelector(ROOM_SELECTORS.dance.anchor);
+          this.pulse = document.querySelector(ROOM_SELECTORS.dance.stepPulse);
+          this.pulseLight = document.querySelector(ROOM_SELECTORS.dance.stepLight);
           this.cameraPosition = new THREE.Vector3();
           this.previousPosition = new THREE.Vector3();
           this.anchorPosition = new THREE.Vector3();
@@ -848,13 +1230,13 @@
         },
         tick(time) {
           const camera = this.el.camera;
-          if (!this.anchor) this.anchor = document.querySelector("#dance-room-anchor");
-          if (!this.pulse) this.pulse = document.querySelector("#dance-step-pulse");
-          if (!this.pulseLight) this.pulseLight = document.querySelector("#dance-step-light");
-          if (!this.floorRings.length) this.floorRings = [...document.querySelectorAll(".dance-floor-ring")];
-          if (!this.danceObjects.length) this.danceObjects = [...document.querySelectorAll(".dance-object")];
-          if (!this.reflectionLights.length) this.reflectionLights = [...document.querySelectorAll(".dance-reflection-light")];
-          if (!this.hangingRibbons.length) this.hangingRibbons = [...document.querySelectorAll(".dance-hanging-ribbon")];
+          ensureElement(this, "anchor", ROOM_SELECTORS.dance.anchor);
+          ensureElement(this, "pulse", ROOM_SELECTORS.dance.stepPulse);
+          ensureElement(this, "pulseLight", ROOM_SELECTORS.dance.stepLight);
+          ensureCachedElements(this, "floorRings", ROOM_SELECTORS.dance.floorRings);
+          ensureCachedElements(this, "danceObjects", ROOM_SELECTORS.dance.objects);
+          ensureCachedElements(this, "reflectionLights", ROOM_SELECTORS.dance.reflectionLights);
+          ensureCachedElements(this, "hangingRibbons", ROOM_SELECTORS.dance.hangingRibbons);
           if (this.pulse && !this.pulseListenerBound) {
             this.pulseListenerBound = true;
             this.pulse.addEventListener("animationcomplete__fade", () => {
@@ -866,14 +1248,14 @@
           camera.el.object3D.getWorldPosition(this.cameraPosition);
           this.anchor.object3D.getWorldPosition(this.anchorPosition);
           const roomReactivity = this.el.components["environmental-reactivity"];
-          const roomPresence = roomReactivity?.getRoomPresence("dance") ?? 0;
+          const roomPresence = roomReactivity?.getRoomPresence(ROOM_KEYS.dance) ?? 0;
           const movementPresence = roomReactivity?.movement ?? 0;
 
           const dx = this.cameraPosition.x - this.anchorPosition.x;
           const dz = this.cameraPosition.z - this.anchorPosition.z;
           const distanceFromDanceCenter = Math.sqrt(dx * dx + dz * dz);
           const inside = roomReactivity
-            ? roomReactivity.isActiveRoom("dance") && roomPresence > 0.04
+            ? roomReactivity.isActiveRoom(ROOM_KEYS.dance) && roomPresence > 0.04
             : distanceFromDanceCenter <= this.data.radius;
 
           if (inside !== this.insideDanceRoom) {
@@ -1030,18 +1412,18 @@
           const camera = this.el.camera;
           if (!camera) return;
 
-          if (!this.liveObjects.length) this.liveObjects = [...document.querySelectorAll(".live-object")];
-          if (!this.crowdMarkers.length) this.crowdMarkers = [...document.querySelectorAll(".live-crowd-marker")];
-          if (!this.raveBeams.length) this.raveBeams = [...document.querySelectorAll(".live-rave-beam")];
-          if (!this.roomBeams.length) this.roomBeams = [...document.querySelectorAll(".live-room-beam")];
-          if (!this.steamRibbons.length) this.steamRibbons = [...document.querySelectorAll(".live-steam-ribbon")];
-          if (!this.objectAuras.length) this.objectAuras = [...document.querySelectorAll(".live-object-aura")];
-          if (!this.roomRings.length) this.roomRings = [...document.querySelectorAll(".live-room-ring")];
-          if (!this.roomLights.length) this.roomLights = [...document.querySelectorAll(".live-room-light")];
+          ensureCachedElements(this, "liveObjects", ROOM_SELECTORS.liveEvents.objects);
+          ensureCachedElements(this, "crowdMarkers", ROOM_SELECTORS.liveEvents.crowdMarkers);
+          ensureCachedElements(this, "raveBeams", ROOM_SELECTORS.liveEvents.raveBeams);
+          ensureCachedElements(this, "roomBeams", ROOM_SELECTORS.liveEvents.roomBeams);
+          ensureCachedElements(this, "steamRibbons", ROOM_SELECTORS.liveEvents.steamRibbons);
+          ensureCachedElements(this, "objectAuras", ROOM_SELECTORS.liveEvents.objectAuras);
+          ensureCachedElements(this, "roomRings", ROOM_SELECTORS.liveEvents.roomRings);
+          ensureCachedElements(this, "roomLights", ROOM_SELECTORS.liveEvents.roomLights);
 
           camera.el.object3D.getWorldPosition(this.cameraPosition);
           const roomReactivity = this.el.components["environmental-reactivity"];
-          const presence = roomReactivity?.getRoomPresence("live") ?? 0;
+          const presence = roomReactivity?.getRoomPresence(ROOM_KEYS.liveEvents) ?? 0;
           const ambient = presence * (0.74 + Math.sin(time * 0.00038) * 0.08);
           let nearestDetail = null;
           let nearestAmount = 0;
@@ -1133,18 +1515,18 @@
           const camera = this.el.camera;
           if (!camera) return;
 
-          if (!this.brandObjects.length) this.brandObjects = [...document.querySelectorAll(".brand-object")];
-          if (!this.columns.length) this.columns = [...document.querySelectorAll(".brand-column")];
-          if (!this.columnGlows.length) this.columnGlows = [...document.querySelectorAll(".brand-column-glow")];
-          if (!this.scanLines.length) this.scanLines = [...document.querySelectorAll(".brand-scan-line")];
-          if (!this.ceilingLights.length) this.ceilingLights = [...document.querySelectorAll(".brand-ceiling-light")];
-          if (!this.ceilingAccents.length) this.ceilingAccents = [...document.querySelectorAll(".brand-ceiling-accent")];
-          if (!this.sheens.length) this.sheens = [...document.querySelectorAll(".brand-architectural-sheen")];
-          if (!this.focalElements.length) this.focalElements = [...document.querySelectorAll(".brand-focal-element")];
+          ensureCachedElements(this, "brandObjects", ROOM_SELECTORS.brandWork.objects);
+          ensureCachedElements(this, "columns", ROOM_SELECTORS.brandWork.columns);
+          ensureCachedElements(this, "columnGlows", ROOM_SELECTORS.brandWork.columnGlows);
+          ensureCachedElements(this, "scanLines", ROOM_SELECTORS.brandWork.scanLines);
+          ensureCachedElements(this, "ceilingLights", ROOM_SELECTORS.brandWork.ceilingLights);
+          ensureCachedElements(this, "ceilingAccents", ROOM_SELECTORS.brandWork.ceilingAccents);
+          ensureCachedElements(this, "sheens", ROOM_SELECTORS.brandWork.sheens);
+          ensureCachedElements(this, "focalElements", ROOM_SELECTORS.brandWork.focalElements);
 
           camera.el.object3D.getWorldPosition(this.cameraPosition);
           const roomReactivity = this.el.components["environmental-reactivity"];
-          const presence = roomReactivity?.getRoomPresence("brand") ?? 0;
+          const presence = roomReactivity?.getRoomPresence(ROOM_KEYS.brandWork) ?? 0;
           let productNear = 0;
 
           this.brandObjects.forEach((object) => {
@@ -1241,26 +1623,38 @@
 
           const cameraPosition = camera.el.object3D.getWorldPosition(new THREE.Vector3());
           const spherePosition = this.el.object3D.getWorldPosition(new THREE.Vector3());
-          const nearby = cameraPosition.distanceTo(spherePosition) < 3.2;
+          const nearby =
+            cameraPosition.distanceTo(spherePosition) < INTERACTION_CONFIG.secretSphere.proximityRadius;
           if (nearby !== this.nearby) {
             this.nearby = nearby;
             this.setActive(nearby);
           }
         },
         setActive(active) {
-          this.el.object3D.scale.copy(this.baseScale).multiplyScalar(active ? 1.16 : 1);
+          this.el.object3D.scale
+            .copy(this.baseScale)
+            .multiplyScalar(active ? INTERACTION_CONFIG.secretSphere.activeScale : 1);
           setMaterial(this.el, {
             ...this.baseMaterial,
-            emissiveIntensity: active ? 1.55 : 0.9,
+            emissiveIntensity: active
+              ? INTERACTION_CONFIG.secretSphere.activeEmissiveIntensity
+              : INTERACTION_CONFIG.secretSphere.idleEmissiveIntensity,
           });
         },
       });
 
+      /*
+       * ==================================================
+       * CORE ROOM
+       * ==================================================
+       * Sacred central hub for identity, social orbit, symbolic projects, and
+       * the proximity-reactive network that branches into the wider world.
+       */
       const createSocialLinks = () => {
-        const orbit = document.querySelector("#social-orbit");
-        SOCIAL_LINKS.forEach((link) => {
+        const orbit = getRoot(ROOM_SELECTORS.core.socialOrbit);
+        ROOM_CONTENT[ROOM_KEYS.core].socialLinks.forEach((link) => {
           const angle = THREE.MathUtils.degToRad(link.angle);
-          const radius = 2.3;
+          const radius = INTERACTION_CONFIG.socialOrbit.radius;
           const x = Math.cos(angle) * radius;
           const z = Math.sin(angle) * radius;
 
@@ -1269,27 +1663,28 @@
           group.setAttribute("position", `${x} 0 ${z}`);
           group.setAttribute("billboard", "");
 
-          const halo = document.createElement("a-ring");
-          halo.setAttribute("class", "core-social-detail");
-          halo.dataset.baseOpacity = "0.38";
-          halo.dataset.opacityLift = "0.08";
-          halo.setAttribute("radius-inner", "0.31");
-          halo.setAttribute("radius-outer", "0.34");
-          halo.setAttribute("color", "#ff8a8a");
-          halo.setAttribute("material", "shader: flat; opacity: 0.38; transparent: true");
+          const halo = createRingElement({
+            className: "core-social-detail",
+            dataset: { baseOpacity: 0.38, opacityLift: 0.08 },
+            radiusInner: "0.31",
+            radiusOuter: "0.34",
+            material: "shader: flat; opacity: 0.38; transparent: true",
+            attributes: { color: "#ff8a8a" },
+          });
 
-          const text = document.createElement("a-text");
-          text.setAttribute("class", "core-social-detail");
-          text.dataset.baseOpacity = "0.54";
-          text.dataset.opacityLift = "0.1";
-          text.setAttribute("value", link.short);
-          text.setAttribute("align", "center");
-          text.setAttribute("width", "2.2");
-          text.setAttribute("color", "#fff2eb");
-          text.setAttribute("position", "0 -0.055 0.01");
-          text.setAttribute("material", "shader: flat; opacity: 0.54; transparent: true");
-          text.setAttribute("data-url", link.url);
-          text.setAttribute("title", link.name);
+          const text = createTextLabel({
+            value: link.short,
+            position: "0 -0.055 0.01",
+            width: "2.2",
+            color: "#fff2eb",
+            material: "shader: flat; opacity: 0.54; transparent: true",
+            className: "core-social-detail",
+            dataset: { baseOpacity: 0.54, opacityLift: 0.1 },
+            attributes: {
+              "data-url": link.url,
+              title: link.name,
+            },
+          });
 
           group.addEventListener("click", () => window.open(link.url, "_blank", "noopener"));
           group.append(halo, text);
@@ -1329,22 +1724,22 @@
         if (project.detail === "formation") {
           for (let index = 0; index < 6; index += 1) {
             const angle = (Math.PI * 2 * index) / 6;
-          const marker = document.createElement("a-sphere");
-          marker.setAttribute("radius", "0.085");
-          marker.setAttribute("position", `${Math.cos(angle) * 0.94} 0.92 ${Math.sin(angle) * 0.94}`);
-          marker.setAttribute("material", "color: #88e0c8; emissive: #88e0c8; emissiveIntensity: 0.55; roughness: 0.35");
-          marker.setAttribute("animation__breathe", {
-            property: "scale",
-            from: "1 1 1",
-            to: "1.12 1.12 1.12",
-            dur: 5200 + index * 180,
-            dir: "alternate",
-            easing: "easeInOutSine",
-            loop: true,
-          });
-          object.appendChild(marker);
+            const marker = document.createElement("a-sphere");
+            marker.setAttribute("radius", "0.085");
+            marker.setAttribute("position", `${Math.cos(angle) * 0.94} 0.92 ${Math.sin(angle) * 0.94}`);
+            marker.setAttribute("material", "color: #88e0c8; emissive: #88e0c8; emissiveIntensity: 0.55; roughness: 0.35");
+            marker.setAttribute("animation__breathe", {
+              property: "scale",
+              from: "1 1 1",
+              to: "1.12 1.12 1.12",
+              dur: 5200 + index * 180,
+              dir: "alternate",
+              easing: "easeInOutSine",
+              loop: true,
+            });
+            object.appendChild(marker);
+          }
         }
-      }
 
         if (project.detail === "frame") {
           const screen = document.createElement("a-plane");
@@ -1409,57 +1804,42 @@
       };
 
       const createNetworkLines = () => {
-        const lineRoot = document.querySelector("#network-lines");
-        NETWORK_LINES.forEach((line) => {
-          const strand = document.createElement("a-entity");
-          strand.setAttribute("class", "core-network-line");
-          strand.dataset.baseOpacity = INTERACTION_CONFIG.core.baseNetworkOpacity;
-          strand.setAttribute("line", {
-            start: line.from,
-            end: line.to,
-            color: line.color,
-            opacity: INTERACTION_CONFIG.core.baseNetworkOpacity,
-          });
-          lineRoot.appendChild(strand);
+        const lineRoot = getRoot(ROOM_SELECTORS.core.networkRoot);
+        ROOM_CONTENT[ROOM_KEYS.core].networkLines.forEach((line) => {
+          lineRoot.appendChild(
+            createLineEntity({
+              start: line.from,
+              end: line.to,
+              color: line.color,
+              opacity: INTERACTION_CONFIG.core.baseNetworkOpacity,
+              className: "core-network-line",
+              dataset: { baseOpacity: INTERACTION_CONFIG.core.baseNetworkOpacity },
+            }),
+          );
         });
       };
 
-      const createProjectObjects = () => {
-        const projectRoot = document.querySelector("#project-objects");
-        CORE_SYMBOLS.forEach((project) => {
-          const object = document.createElement("a-entity");
-          object.setAttribute("class", "interactive core-symbol");
-          object.dataset.baseEmissive = "0.24";
-          object.setAttribute("geometry", project.geometry);
-          object.setAttribute("position", project.position);
-          object.setAttribute("rotation", project.rotation);
-          object.setAttribute("scale", project.scale);
-          object.setAttribute("material", {
-            color: project.color,
-            emissive: project.emissive,
-            emissiveIntensity: 0.24,
-            metalness: project.metalness ?? 0.35,
-            roughness: project.roughness ?? 0.42,
-          });
-          object.setAttribute("shadow", "cast: true; receive: true");
-          object.setAttribute("interactive-surface", {
-            label: project.name,
-            hoverColor: project.hoverColor,
-            emissive: project.accent,
-            labelOffset: project.labelOffset,
-          });
-          object.setAttribute("animation__idle", {
-            property: "rotation",
-            to: `${project.rotation.split(" ")[0]} ${Number(project.rotation.split(" ")[1]) + 360} ${project.rotation.split(" ")[2]}`,
-            dur: project.idleDuration,
-            easing: "linear",
-            loop: true,
+      const createCoreRoomProjectObjects = () => {
+        const projectRoot = getRoot(ROOM_SELECTORS.core.projectRoot);
+        ROOM_CONTENT[ROOM_KEYS.core].symbols.forEach((project) => {
+          const object = createInteractiveProjectObject(project, {
+            className: "core-symbol",
+            baseEmissive: 0.24,
+            materialDefaults: { metalness: 0.35, roughness: 0.42 },
+            idleAnimationName: "idle",
           });
           addSymbolDetail(object, project);
           projectRoot.appendChild(object);
         });
       };
 
+      /*
+       * ==================================================
+       * DANCE ROOM
+       * ==================================================
+       * Rhythmic branch room built from project objects, movement trails, and
+       * floor responses. Future choreography content should extend this data.
+       */
       const addDanceDetail = (object, project) => {
         if (project.detail === "orbit") {
           [0, 72, 144].forEach((rotation, index) => {
@@ -1526,44 +1906,19 @@
       };
 
       const createDanceRoom = () => {
-        const danceRoot = document.querySelector("#dance-projects");
-        DANCE_PROJECTS.forEach((project) => {
-          const object = document.createElement("a-entity");
-          object.setAttribute("class", "interactive dance-object");
-          object.dataset.baseEmissive = "0.34";
-          if (project.geometry) object.setAttribute("geometry", project.geometry);
-          object.setAttribute("position", project.position);
-          object.setAttribute("rotation", project.rotation);
-          object.setAttribute("scale", project.scale);
-          object.setAttribute("material", {
-            color: project.color,
-            emissive: project.emissive,
-            emissiveIntensity: 0.34,
-            metalness: 0.32,
-            roughness: 0.28,
-          });
-          object.setAttribute("shadow", "cast: true; receive: true");
-          object.setAttribute("interactive-surface", {
-            label: project.name,
-            hoverColor: project.hoverColor,
-            emissive: project.accent,
+        const danceRoot = getRoot(ROOM_SELECTORS.dance.projectsRoot);
+        ROOM_CONTENT[ROOM_KEYS.dance].projects.forEach((project) => {
+          const object = createInteractiveProjectObject(project, {
+            className: "dance-object",
+            baseEmissive: 0.34,
+            materialDefaults: { metalness: 0.32, roughness: 0.28 },
             hoverScale: 1.09,
-            labelOffset: project.labelOffset,
-          });
-          object.setAttribute("animation__dance", {
-            property: "rotation",
-            to: `${project.rotation.split(" ")[0]} ${Number(project.rotation.split(" ")[1]) + 360} ${project.rotation.split(" ")[2]}`,
-            dur: project.idleDuration,
-            easing: "linear",
-            loop: true,
+            idleAnimationName: "dance",
           });
           object.setAttribute("animation__breath", {
             property: "scale",
             from: project.scale,
-            to: project.scale
-              .split(" ")
-              .map((value) => Number(value) * 1.012)
-              .join(" "),
+            to: scaledVectorString(project.scale, 1.012),
             dir: "alternate",
             dur: 5200,
             easing: "easeInOutSine",
@@ -1573,19 +1928,16 @@
           danceRoot.appendChild(object);
         });
 
-        const trailRoot = document.querySelector("#dance-trails");
-        DANCE_TRAILS.forEach((trail) => {
-          const line = document.createElement("a-entity");
-          line.setAttribute("line", {
-            start: trail.start,
-            end: trail.end,
-            color: trail.color,
-            opacity: trail.opacity,
-          });
-          trailRoot.appendChild(line);
-        });
+        appendTrailLines(getRoot(ROOM_SELECTORS.dance.trailsRoot), ROOM_CONTENT[ROOM_KEYS.dance].trails);
       };
 
+      /*
+       * ==================================================
+       * LIVE EVENTS ROOM
+       * ==================================================
+       * Event branch for rave, coffee/DJ, crowd markers, and responsive beams.
+       * Keep venue-specific content data-driven through the room config.
+       */
       const addLiveEventDetail = (object, project) => {
         if (project.detail === "rave") {
           [0, 60, 120].forEach((rotation, index) => {
@@ -1670,59 +2022,37 @@
       };
 
       const createLiveEventsRoom = () => {
-        const liveRoot = document.querySelector("#live-event-projects");
-        LIVE_EVENT_PROJECTS.forEach((project) => {
-          const object = document.createElement("a-entity");
-          object.setAttribute("class", "interactive live-object");
-          object.dataset.baseEmissive = "0.38";
-          object.dataset.detail = project.detail;
-          object.setAttribute("geometry", project.geometry);
-          object.setAttribute("position", project.position);
-          object.setAttribute("rotation", project.rotation);
-          object.setAttribute("scale", project.scale);
-          object.setAttribute("material", {
-            color: project.color,
-            emissive: project.emissive,
-            emissiveIntensity: 0.38,
-            metalness: project.metalness,
-            roughness: project.roughness,
-          });
-          object.setAttribute("shadow", "cast: true; receive: true");
-          object.setAttribute("interactive-surface", {
-            label: project.name,
-            hoverColor: project.hoverColor,
-            emissive: project.accent,
+        const liveRoot = getRoot(ROOM_SELECTORS.liveEvents.projectsRoot);
+        ROOM_CONTENT[ROOM_KEYS.liveEvents].projects.forEach((project) => {
+          const object = createInteractiveProjectObject(project, {
+            className: "live-object",
+            baseEmissive: 0.38,
             hoverScale: 1.08,
-            labelOffset: project.labelOffset,
-          });
-          object.setAttribute("animation__live", {
-            property: "rotation",
-            to: `${project.rotation.split(" ")[0]} ${Number(project.rotation.split(" ")[1]) + 360} ${project.rotation.split(" ")[2]}`,
-            dur: project.idleDuration * 1.35,
-            easing: "linear",
-            loop: true,
+            idleAnimationName: "live",
+            idleDurationMultiplier: 1.35,
+            includeDetailDataset: true,
           });
           addLiveEventDetail(object, project);
-          const aura = document.createElement("a-ring");
-          aura.setAttribute("class", "live-object-aura");
-          aura.dataset.baseOpacity = "0.075";
-          aura.dataset.detail = project.detail;
-          aura.setAttribute("rotation", "-90 0 0");
-          aura.setAttribute("position", "0 -0.58 0");
-          aura.setAttribute("radius-inner", project.detail === "rave" ? "1.12" : "0.96");
-          aura.setAttribute("radius-outer", project.detail === "rave" ? "1.16" : "1");
-          aura.setAttribute("material", {
-            shader: "flat",
-            color: project.accent,
-            opacity: 0.075,
-            transparent: true,
+          const aura = createRingElement({
+            className: "live-object-aura",
+            dataset: { baseOpacity: 0.075, detail: project.detail },
+            position: "0 -0.58 0",
+            rotation: "-90 0 0",
+            radiusInner: project.detail === "rave" ? "1.12" : "0.96",
+            radiusOuter: project.detail === "rave" ? "1.16" : "1",
+            material: {
+              shader: "flat",
+              color: project.accent,
+              opacity: 0.075,
+              transparent: true,
+            },
           });
           object.appendChild(aura);
           liveRoot.appendChild(object);
         });
 
-        const crowdRoot = document.querySelector("#live-crowd");
-        LIVE_CROWD_MARKERS.forEach((marker) => {
+        const crowdRoot = getRoot(ROOM_SELECTORS.liveEvents.crowdRoot);
+        ROOM_CONTENT[ROOM_KEYS.liveEvents].crowdMarkers.forEach((marker) => {
           const body = document.createElement("a-cylinder");
           body.setAttribute("class", "live-crowd-marker");
           body.dataset.baseEmissive = "0.44";
@@ -1742,19 +2072,19 @@
           crowdRoot.appendChild(body);
         });
 
-        const trailRoot = document.querySelector("#live-event-trails");
-        LIVE_EVENT_TRAILS.forEach((trail) => {
-          const line = document.createElement("a-entity");
-          line.setAttribute("line", {
-            start: trail.start,
-            end: trail.end,
-            color: trail.color,
-            opacity: trail.opacity,
-          });
-          trailRoot.appendChild(line);
-        });
+        appendTrailLines(
+          getRoot(ROOM_SELECTORS.liveEvents.trailsRoot),
+          ROOM_CONTENT[ROOM_KEYS.liveEvents].trails,
+        );
       };
 
+      /*
+       * ==================================================
+       * BRAND WORK ROOM
+       * ==================================================
+       * Cool axial showroom for product/merch work. Keep project metadata and
+       * external content loading hooked through room config extension points.
+       */
       const addBrandDetail = (object, project) => {
         if (project.detail === "product") {
           const pedestal = document.createElement("a-cylinder");
@@ -1930,8 +2260,8 @@
       };
 
       const createBrandWorkRoom = () => {
-        const columnRoot = document.querySelector("#brand-columns");
-        BRAND_COLUMNS.forEach((column) => {
+        const columnRoot = getRoot(ROOM_SELECTORS.brandWork.columnsRoot);
+        ROOM_CONTENT[ROOM_KEYS.brandWork].columns.forEach((column) => {
           const body = document.createElement("a-box");
           body.setAttribute("class", "brand-column");
           body.dataset.baseEmissive = "0.38";
@@ -1960,55 +2290,33 @@
           columnRoot.appendChild(body);
         });
 
-        const brandRoot = document.querySelector("#brand-projects");
-        BRAND_PROJECTS.forEach((project) => {
-          const object = document.createElement("a-entity");
-          object.setAttribute("class", "interactive brand-object");
-          object.dataset.baseEmissive = "0.32";
-          object.dataset.detail = project.detail;
-          object.setAttribute("geometry", project.geometry);
-          object.setAttribute("position", project.position);
-          object.setAttribute("rotation", project.rotation);
-          object.setAttribute("scale", project.scale);
-          object.setAttribute("material", {
-            color: project.color,
-            emissive: project.emissive,
-            emissiveIntensity: 0.32,
-            metalness: project.metalness,
-            roughness: project.roughness,
-          });
-          object.setAttribute("shadow", "cast: true; receive: true");
-          object.setAttribute("interactive-surface", {
-            label: project.name,
-            hoverColor: project.hoverColor,
-            emissive: project.accent,
+        const brandRoot = getRoot(ROOM_SELECTORS.brandWork.projectsRoot);
+        ROOM_CONTENT[ROOM_KEYS.brandWork].projects.forEach((project) => {
+          const object = createInteractiveProjectObject(project, {
+            className: "brand-object",
+            baseEmissive: 0.32,
             hoverScale: 1.06,
-            labelOffset: project.labelOffset,
-          });
-          object.setAttribute("animation__brand", {
-            property: "rotation",
-            to: `${project.rotation.split(" ")[0]} ${Number(project.rotation.split(" ")[1]) + 360} ${project.rotation.split(" ")[2]}`,
-            dur: project.idleDuration,
-            easing: "linear",
-            loop: true,
+            idleAnimationName: "brand",
+            includeDetailDataset: true,
+            forceGeometryAttribute: true,
           });
           addBrandDetail(object, project);
           brandRoot.appendChild(object);
         });
 
-        const trailRoot = document.querySelector("#brand-trails");
-        BRAND_TRAILS.forEach((trail) => {
-          const line = document.createElement("a-entity");
-          line.setAttribute("line", {
-            start: trail.start,
-            end: trail.end,
-            color: trail.color,
-            opacity: trail.opacity,
-          });
-          trailRoot.appendChild(line);
-        });
+        appendTrailLines(
+          getRoot(ROOM_SELECTORS.brandWork.trailsRoot),
+          ROOM_CONTENT[ROOM_KEYS.brandWork].trails,
+        );
       };
 
+      /*
+       * ==================================================
+       * TRANSITIONS
+       * ==================================================
+       * Navigation cues bridge the core to each branch without becoming UI.
+       * Extend this data when adding future rooms or hidden paths.
+       */
       const parseVector = (value) => {
         const [x, y, z] = value.split(" ").map(Number);
         return new THREE.Vector3(x, y, z);
@@ -2040,22 +2348,22 @@
       };
 
       const createBranchNavigationCues = () => {
-        const navRoot = document.querySelector("#branch-navigation-cues");
-        BRANCH_NAV_CUES.forEach((branch) => {
+        const navRoot = getRoot(ROOM_SELECTORS.transitions.branchNavigationCuesRoot);
+        TRANSITION_CONTENT.branchNavigationCues.forEach((branch) => {
           const group = document.createElement("a-entity");
           group.setAttribute("id", `${branch.id}-navigation-cues`);
 
           branch.trail.forEach((segment, index) => {
             group.appendChild(createPathStrip(segment, index === 1 ? branch.colors.threshold : branch.colors.trail));
 
-            const line = document.createElement("a-entity");
-            line.setAttribute("line", {
-              start: segment.start,
-              end: segment.end,
-              color: index === 1 ? branch.colors.secondary : branch.colors.trail,
-              opacity: segment.opacity + 0.08,
-            });
-            group.appendChild(line);
+            group.appendChild(
+              createLineEntity({
+                start: segment.start,
+                end: segment.end,
+                color: index === 1 ? branch.colors.secondary : branch.colors.trail,
+                opacity: segment.opacity + 0.08,
+              }),
+            );
           });
 
           branch.particles.forEach((particle) => {
@@ -2133,7 +2441,7 @@
             threshold.appendChild(thresholdPost);
           });
 
-          if (NAV_LABELS_ENABLED) {
+          if (TRANSITION_CONTENT.navLabelsEnabled) {
             const label = document.createElement("a-text");
             label.setAttribute("value", branch.label);
             label.setAttribute("position", branch.threshold.labelPosition);
@@ -2279,7 +2587,7 @@
       };
 
       const createCoreCeilingArchitecture = () => {
-        const coreRoot = document.querySelector("#core-wrap");
+        const coreRoot = getRoot(ROOM_SELECTORS.core.wrap);
         if (!coreRoot) return;
 
         const ceiling = document.createElement("a-entity");
@@ -2372,7 +2680,7 @@
       };
 
       const createDanceCeilingArchitecture = () => {
-        const danceRoot = document.querySelector("#dance-room-anchor");
+        const danceRoot = getRoot(ROOM_SELECTORS.dance.anchor);
         if (!danceRoot) return;
 
         const ceiling = document.createElement("a-entity");
@@ -2446,7 +2754,7 @@
       };
 
       const createLiveEventsCeilingArchitecture = () => {
-        const liveRoot = document.querySelector("#live-events-room-anchor");
+        const liveRoot = getRoot(ROOM_SELECTORS.liveEvents.anchor);
         if (!liveRoot) return;
 
         const ceiling = document.createElement("a-entity");
@@ -2539,7 +2847,7 @@
       };
 
       const createBrandCeilingArchitecture = () => {
-        const brandRoot = document.querySelector("#brand-work-room-anchor");
+        const brandRoot = getRoot(ROOM_SELECTORS.brandWork.anchor);
         if (!brandRoot) return;
 
         const ceiling = document.createElement("a-entity");
@@ -2662,10 +2970,18 @@
         brandRoot.appendChild(ceiling);
       };
 
+      /*
+       * ==================================================
+       * BOOTSTRAP
+       * ==================================================
+       * Generated scene content is mounted after the static room shells exist.
+       * This keeps room markup stable while future data loaders can swap in
+       * project metadata, spatial audio zones, or hidden-space content.
+       */
       window.addEventListener("DOMContentLoaded", () => {
         createSocialLinks();
         createNetworkLines();
-        createProjectObjects();
+        createCoreRoomProjectObjects();
         createBranchNavigationCues();
         createDanceRoom();
         createLiveEventsRoom();
@@ -2687,6 +3003,9 @@
       live-events-room-response
       brand-room-response
     >
+      <!-- ==================================================
+           CONFIG / SHARED ASSETS
+           ================================================== -->
       <!-- Intentional dark gallery atmosphere: fog, low light, and a non-default reflective floor. -->
       <a-assets>
         <img id="xo-logo" src="assets/xo-logo.jpg" alt="XO logo" />
@@ -2696,6 +3015,9 @@
         ></a-mixin>
       </a-assets>
 
+      <!-- ==================================================
+           CORE ROOM
+           ================================================== -->
       <a-entity light="type: ambient; color: #5f6675; intensity: 0.22"></a-entity>
       <a-entity
         position="-4.2 7.5 2.8"
@@ -2853,6 +3175,9 @@
       <a-entity id="brand-trails"></a-entity>
       <a-entity id="branch-navigation-cues"></a-entity>
 
+      <!-- ==================================================
+           TRANSITIONS
+           ================================================== -->
       <!-- Safety clearance rule: the Core-to-Dance passage must stay visibly clear of core objects, especially XO Web. -->
       <a-entity id="liminal-corridor" position="-12.75 0 -5.45" rotation="0 -39 0">
         <a-plane
@@ -2943,6 +3268,9 @@
         ></a-entity>
       </a-entity>
 
+      <!-- ==================================================
+           DANCE ROOM
+           ================================================== -->
       <!-- Dance Room branch: a warmer, rhythmic spatial shell connected by flowing movement traces. -->
       <a-entity id="dance-room-anchor" position="-24.2 0 -14.2" rotation="0 -18 0">
         <a-cylinder
@@ -3116,6 +3444,9 @@
         ></a-plane>
       </a-entity>
 
+      <!-- ==================================================
+           LIVE EVENTS ROOM
+           ================================================== -->
       <!-- Live Events branch: a separate event path with open clearance from the Core and Dance routes. -->
       <a-entity id="live-events-transition" position="13.2 0 -4.85" rotation="0 22 0">
         <a-plane
@@ -3334,6 +3665,9 @@
         ></a-entity>
       </a-entity>
 
+      <!-- ==================================================
+           BRAND WORK ROOM
+           ================================================== -->
       <!-- Brand Work branch: a cool axial installation chamber for polished project presentation. -->
       <a-entity id="brand-transition" position="0 0 10.15" rotation="0 0 0">
         <a-plane
@@ -3596,6 +3930,9 @@
         ></a-box>
       </a-entity>
 
+      <!-- ==================================================
+           CORE ROOM
+           ================================================== -->
       <!-- Distant verticals give the core room depth without becoming new rooms yet. -->
       <a-box position="-7.4 1.35 -7.9" width="0.22" height="2.7" depth="0.22" color="#0a0d13" material="emissive: #111923; emissiveIntensity: 0.3"></a-box>
       <a-box position="7.8 1.85 -6.8" width="0.24" height="3.7" depth="0.24" color="#0a0d13" material="emissive: #15151d; emissiveIntensity: 0.32"></a-box>
@@ -3747,6 +4084,9 @@
 
       <a-entity id="project-objects"></a-entity>
 
+      <!-- ==================================================
+           FUTURE EXPANSION / HIDDEN SPACES
+           ================================================== -->
       <!-- Hidden nook: a discoverable side chamber for future secret content or sound design. -->
       <a-entity id="hidden-nook" position="10 0 5" rotation="0 -18 0">
         <a-box
@@ -3796,6 +4136,9 @@
         <!-- Sound placeholder: a low, warm tone could fade in here as the visitor enters the nook. -->
       </a-entity>
 
+      <!-- ==================================================
+           INTERACTIONS
+           ================================================== -->
       <!-- Desktop testing uses WASD + mouse look; WebXR remains available through A-Frame. -->
       <a-entity id="camera-rig" position="0 0 8">
         <a-camera wasd-controls="acceleration: 24" look-controls="pointerLockEnabled: true">

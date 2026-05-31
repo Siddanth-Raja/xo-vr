@@ -2193,6 +2193,475 @@
         });
       };
 
+      const createCeilingLine = (root, { start, end, color, opacity, className = "" }) => {
+        const line = document.createElement("a-entity");
+        if (className) line.setAttribute("class", className);
+        line.dataset.baseOpacity = opacity;
+        line.setAttribute("line", { start, end, color, opacity });
+        root.appendChild(line);
+        return line;
+      };
+
+      const createCeilingRing = (
+        root,
+        { position, rotation, inner, outer, color, opacity, scale, animation, className = "" },
+      ) => {
+        const ring = document.createElement("a-ring");
+        if (className) ring.setAttribute("class", className);
+        ring.setAttribute("position", position);
+        ring.setAttribute("rotation", rotation);
+        ring.setAttribute("radius-inner", inner);
+        ring.setAttribute("radius-outer", outer);
+        if (scale) ring.setAttribute("scale", scale);
+        ring.setAttribute("material", {
+          shader: "flat",
+          color,
+          opacity,
+          transparent: true,
+          side: "double",
+        });
+        if (animation) ring.setAttribute("animation__drift", animation);
+        root.appendChild(ring);
+        return ring;
+      };
+
+      const createCeilingBar = (
+        root,
+        { position, rotation = "0 0 0", width, height, depth, color, emissive, emissiveIntensity, opacity = 1, className = "" },
+      ) => {
+        const bar = document.createElement("a-box");
+        if (className) className.split(" ").forEach((name) => bar.classList.add(name));
+        bar.setAttribute("position", position);
+        bar.setAttribute("rotation", rotation);
+        bar.setAttribute("width", width);
+        bar.setAttribute("height", height);
+        bar.setAttribute("depth", depth);
+        bar.setAttribute("material", {
+          color,
+          emissive,
+          emissiveIntensity,
+          opacity,
+          transparent: opacity < 1,
+          metalness: 0.22,
+          roughness: 0.34,
+        });
+        root.appendChild(bar);
+        return bar;
+      };
+
+      const createCeilingPlane = (
+        root,
+        { position, rotation = "0 0 0", width, height, color, opacity, className = "", animation },
+      ) => {
+        const plane = document.createElement("a-plane");
+        if (className) className.split(" ").forEach((name) => plane.classList.add(name));
+        plane.setAttribute("position", position);
+        plane.setAttribute("rotation", rotation);
+        plane.setAttribute("width", width);
+        plane.setAttribute("height", height);
+        plane.setAttribute("material", {
+          shader: "flat",
+          color,
+          opacity,
+          transparent: true,
+          side: "double",
+        });
+        if (animation) plane.setAttribute("animation__drift", animation);
+        root.appendChild(plane);
+        return plane;
+      };
+
+      const createCeilingArchitecture = () => {
+        createCoreCeilingArchitecture();
+        createDanceCeilingArchitecture();
+        createLiveEventsCeilingArchitecture();
+        createBrandCeilingArchitecture();
+      };
+
+      const createCoreCeilingArchitecture = () => {
+        const coreRoot = document.querySelector("#core-wrap");
+        if (!coreRoot) return;
+
+        const ceiling = document.createElement("a-entity");
+        ceiling.setAttribute("id", "core-ceiling-architecture");
+        ceiling.setAttribute("class", "ceiling-architecture");
+
+        [
+          {
+            position: "0 4.62 0",
+            rotation: "86 0 0",
+            inner: 3.35,
+            outer: 3.38,
+            color: "#ff4a52",
+            opacity: 0.11,
+            scale: "1.25 0.72 1",
+            animation: "property: rotation; to: 86 360 0; dur: 96000; easing: linear; loop: true",
+          },
+          {
+            position: "0.12 5.18 -0.08",
+            rotation: "78 0 22",
+            inner: 2.35,
+            outer: 2.38,
+            color: "#ff858a",
+            opacity: 0.09,
+            scale: "1 0.64 1",
+            animation: "property: rotation; to: 438 0 22; dur: 118000; easing: linear; loop: true",
+          },
+          {
+            position: "-0.2 5.76 0.18",
+            rotation: "68 32 -10",
+            inner: 1.42,
+            outer: 1.45,
+            color: "#8b2230",
+            opacity: 0.12,
+            animation: "property: rotation; to: 68 392 -10; dur: 132000; easing: linear; loop: true",
+          },
+        ].forEach((ring) => createCeilingRing(ceiling, ring));
+
+        const nodes = [
+          { position: "-2.65 4.2 -1.28", color: "#ff4a52", radius: 0.055 },
+          { position: "2.2 4.55 -1.85", color: "#d94d5a", radius: 0.046 },
+          { position: "1.55 5.05 1.85", color: "#ff858a", radius: 0.05 },
+          { position: "-1.4 5.42 2.15", color: "#8b2230", radius: 0.042 },
+          { position: "0.12 5.95 -0.32", color: "#ff4a52", radius: 0.06 },
+          { position: "-3.35 4.82 0.72", color: "#b80f19", radius: 0.04 },
+          { position: "3.08 4.92 0.46", color: "#ff858a", radius: 0.038 },
+        ];
+
+        nodes.forEach((node) => {
+          const marker = document.createElement("a-sphere");
+          marker.setAttribute("class", "core-overhead-fragment");
+          marker.dataset.baseEmissive = "0.14";
+          marker.dataset.baseOpacity = "0.28";
+          marker.setAttribute("radius", node.radius);
+          marker.setAttribute("position", node.position);
+          marker.setAttribute("material", {
+            color: "#120507",
+            emissive: node.color,
+            emissiveIntensity: 0.14,
+            opacity: 0.28,
+            transparent: true,
+            metalness: 0.18,
+            roughness: 0.34,
+          });
+          ceiling.appendChild(marker);
+        });
+
+        [
+          ["0 1.02 0", "-2.65 4.2 -1.28", "#ff4a52", 0.13],
+          ["0 1.02 0", "2.2 4.55 -1.85", "#d94d5a", 0.11],
+          ["0 1.02 0", "1.55 5.05 1.85", "#ff858a", 0.1],
+          ["0 1.02 0", "-1.4 5.42 2.15", "#8b2230", 0.1],
+          ["-2.65 4.2 -1.28", "0.12 5.95 -0.32", "#ff4a52", 0.12],
+          ["2.2 4.55 -1.85", "0.12 5.95 -0.32", "#d94d5a", 0.1],
+          ["1.55 5.05 1.85", "0.12 5.95 -0.32", "#ff858a", 0.1],
+          ["-1.4 5.42 2.15", "0.12 5.95 -0.32", "#8b2230", 0.09],
+          ["-3.35 4.82 0.72", "-1.4 5.42 2.15", "#b80f19", 0.08],
+          ["3.08 4.92 0.46", "1.55 5.05 1.85", "#ff858a", 0.08],
+        ].forEach(([start, end, color, opacity]) =>
+          createCeilingLine(ceiling, {
+            start,
+            end,
+            color,
+            opacity,
+            className: "core-overhead-line",
+          }),
+        );
+
+        coreRoot.appendChild(ceiling);
+      };
+
+      const createDanceCeilingArchitecture = () => {
+        const danceRoot = document.querySelector("#dance-room-anchor");
+        if (!danceRoot) return;
+
+        const ceiling = document.createElement("a-entity");
+        ceiling.setAttribute("id", "dance-ceiling-architecture");
+        ceiling.setAttribute("class", "ceiling-architecture");
+
+        [
+          {
+            position: "-0.2 4.95 -0.15",
+            rotation: "82 12 4",
+            inner: 3.25,
+            outer: 3.28,
+            color: "#ff8fd2",
+            opacity: 0.105,
+            scale: "1.18 0.64 1",
+            animation: "property: rotation; to: 82 372 4; dur: 96000; easing: linear; loop: true",
+          },
+          {
+            position: "0.62 5.38 0.42",
+            rotation: "74 0 -18",
+            inner: 2.16,
+            outer: 2.19,
+            color: "#8ef0c6",
+            opacity: 0.1,
+            scale: "0.78 1.08 1",
+            animation: "property: rotation; to: 434 0 -18; dur: 112000; easing: linear; loop: true",
+          },
+          {
+            position: "-0.75 5.78 0.25",
+            rotation: "68 34 16",
+            inner: 1.18,
+            outer: 1.21,
+            color: "#ffbd78",
+            opacity: 0.12,
+            animation: "property: rotation; to: 68 394 16; dur: 128000; easing: linear; loop: true",
+          },
+        ].forEach((ring) => createCeilingRing(ceiling, ring));
+
+        [
+          ["-3.05 4.62 -1.25", "-1.2 5.2 -2.75", "#ff8fd2", 0.12],
+          ["-1.2 5.2 -2.75", "1.82 5.08 -2.28", "#8ef0c6", 0.11],
+          ["1.82 5.08 -2.28", "3.12 4.78 0.78", "#ffbd78", 0.11],
+          ["3.12 4.78 0.78", "-0.7 5.62 2.92", "#aaa1ff", 0.1],
+          ["-0.7 5.62 2.92", "-3.05 4.62 -1.25", "#ff8fd2", 0.095],
+          ["-2.25 5.44 1.4", "2.1 5.44 1.16", "#8ef0c6", 0.075],
+          ["-2.38 5.08 -0.8", "2.5 5.74 -0.55", "#ff8fd2", 0.075],
+        ].forEach(([start, end, color, opacity]) =>
+          createCeilingLine(ceiling, { start, end, color, opacity }),
+        );
+
+        [
+          { position: "-3.35 4.28 0.92", rotation: "0 18 4", color: "#ff8fd2", height: 1.45 },
+          { position: "-1.05 4.72 -2.7", rotation: "0 -34 -6", color: "#8ef0c6", height: 1.22 },
+          { position: "1.7 4.45 2.65", rotation: "0 28 6", color: "#ffbd78", height: 1.35 },
+          { position: "3.25 4.82 -0.55", rotation: "0 -18 -5", color: "#aaa1ff", height: 1.08 },
+        ].forEach((ribbon) => {
+          const plane = createCeilingPlane(ceiling, {
+            position: ribbon.position,
+            rotation: ribbon.rotation,
+            width: 0.055,
+            height: ribbon.height,
+            color: ribbon.color,
+            opacity: 0.105,
+            className: "dance-hanging-ribbon",
+          });
+          plane.dataset.baseOpacity = "0.105";
+          plane.dataset.baseEmissive = "0.16";
+        });
+
+        danceRoot.appendChild(ceiling);
+      };
+
+      const createLiveEventsCeilingArchitecture = () => {
+        const liveRoot = document.querySelector("#live-events-room-anchor");
+        if (!liveRoot) return;
+
+        const ceiling = document.createElement("a-entity");
+        ceiling.setAttribute("id", "live-events-ceiling-architecture");
+        ceiling.setAttribute("class", "ceiling-architecture");
+
+        [
+          { position: "0 4.62 -3.35", width: 6.2, color: "#6cf0ff", emissive: "#274f5c" },
+          { position: "0 4.36 3.18", width: 5.6, color: "#f0a55e", emissive: "#5c3820" },
+          { position: "-3.25 4.48 0", width: 6.25, rotation: "0 90 0", color: "#9a4cff", emissive: "#372558" },
+          { position: "3.25 4.48 0", width: 6.25, rotation: "0 90 0", color: "#ffd08a", emissive: "#5c3d1f" },
+        ].forEach((rail) => {
+          createCeilingBar(ceiling, {
+            position: rail.position,
+            rotation: rail.rotation || "0 0 0",
+            width: rail.width,
+            height: 0.055,
+            depth: 0.055,
+            color: "#05060a",
+            emissive: rail.emissive,
+            emissiveIntensity: 0.22,
+            opacity: 0.76,
+            className: "live-room-beam",
+          }).dataset.baseEmissive = "0.22";
+        });
+
+        [
+          ["-3.1 4.48 -3.35", "3.1 4.48 3.18", "#6cf0ff", 0.09],
+          ["3.1 4.48 -3.35", "-3.1 4.48 3.18", "#ffd08a", 0.09],
+          ["-2.2 4.98 -1.4", "2.2 4.98 -1.4", "#f7ddff", 0.1],
+          ["-2.2 4.98 1.35", "2.2 4.98 1.35", "#f0a55e", 0.09],
+          ["-2.2 4.98 -1.4", "-2.2 4.98 1.35", "#9a4cff", 0.08],
+          ["2.2 4.98 -1.4", "2.2 4.98 1.35", "#6cf0ff", 0.08],
+        ].forEach(([start, end, color, opacity]) =>
+          createCeilingLine(ceiling, { start, end, color, opacity }),
+        );
+
+        [
+          {
+            position: "-1.95 4.9 -0.45",
+            rotation: "83 0 10",
+            inner: 1.34,
+            outer: 1.37,
+            color: "#6cf0ff",
+            opacity: 0.11,
+            scale: "1.18 0.72 1",
+          },
+          {
+            position: "1.95 4.82 0.45",
+            rotation: "82 0 -12",
+            inner: 1.34,
+            outer: 1.37,
+            color: "#ffd08a",
+            opacity: 0.1,
+            scale: "1.18 0.72 1",
+          },
+          {
+            position: "0 5.32 0",
+            rotation: "78 22 0",
+            inner: 2.82,
+            outer: 2.85,
+            color: "#f7ddff",
+            opacity: 0.075,
+            animation: "property: rotation; to: 78 382 0; dur: 124000; easing: linear; loop: true",
+          },
+        ].forEach((ring) => createCeilingRing(ceiling, { ...ring, className: "live-room-ring" }));
+
+        [
+          { position: "-1.8 3.75 -2.65", color: "#6cf0ff", height: 0.82 },
+          { position: "0 3.95 -2.65", color: "#f7ddff", height: 1.05 },
+          { position: "1.8 3.75 -2.65", color: "#ffd08a", height: 0.82 },
+          { position: "-2.9 3.55 1.85", color: "#9a4cff", height: 0.72 },
+          { position: "2.9 3.55 1.85", color: "#f0a55e", height: 0.72 },
+        ].forEach((drop) => {
+          const bar = createCeilingBar(ceiling, {
+            position: drop.position,
+            width: 0.05,
+            height: drop.height,
+            depth: 0.05,
+            color: "#04050a",
+            emissive: drop.color,
+            emissiveIntensity: 0.18,
+            opacity: 0.62,
+            className: "live-room-beam",
+          });
+          bar.dataset.baseEmissive = "0.18";
+        });
+
+        liveRoot.appendChild(ceiling);
+      };
+
+      const createBrandCeilingArchitecture = () => {
+        const brandRoot = document.querySelector("#brand-work-room-anchor");
+        if (!brandRoot) return;
+
+        const ceiling = document.createElement("a-entity");
+        ceiling.setAttribute("id", "brand-ceiling-architecture");
+        ceiling.setAttribute("class", "ceiling-architecture");
+
+        [
+          { x: -2.9, width: 0.055, opacity: 0.78 },
+          { x: -1.45, width: 0.04, opacity: 0.52 },
+          { x: 1.45, width: 0.04, opacity: 0.52 },
+          { x: 2.9, width: 0.055, opacity: 0.78 },
+        ].forEach((rail) => {
+          const bar = createCeilingBar(ceiling, {
+            position: `${rail.x} 4.48 0`,
+            width: rail.width,
+            height: 0.055,
+            depth: 10.7,
+            color: "#02050a",
+            emissive: "#1688ff",
+            emissiveIntensity: rail.x === -2.9 || rail.x === 2.9 ? 0.48 : 0.28,
+            opacity: rail.opacity,
+            className: "brand-ceiling-accent",
+          });
+          bar.dataset.baseEmissive = rail.x === -2.9 || rail.x === 2.9 ? "0.48" : "0.28";
+        });
+
+        [-4.55, -2.15, 0, 2.15, 4.55].forEach((z, index) => {
+          const bar = createCeilingBar(ceiling, {
+            position: `0 4.62 ${z}`,
+            width: 7.05 - (index === 2 ? 0.4 : 0),
+            height: 0.05,
+            depth: 0.06,
+            color: "#02050a",
+            emissive: index === 2 ? "#bfe6ff" : "#83d7ff",
+            emissiveIntensity: index === 2 ? 0.42 : 0.3,
+            opacity: index === 2 ? 0.78 : 0.58,
+            className: "brand-ceiling-accent",
+          });
+          bar.dataset.baseEmissive = index === 2 ? "0.42" : "0.30";
+        });
+
+        [
+          {
+            position: "0 4.72 0",
+            rotation: "90 0 0",
+            inner: 2.05,
+            outer: 2.08,
+            color: "#bfe6ff",
+            opacity: 0.17,
+            scale: "1.7 0.72 1",
+          },
+          {
+            position: "0 4.94 0",
+            rotation: "90 0 0",
+            inner: 3.12,
+            outer: 3.15,
+            color: "#65b7ff",
+            opacity: 0.12,
+            scale: "1.28 0.86 1",
+          },
+          {
+            position: "0 5.22 0",
+            rotation: "82 0 0",
+            inner: 4.1,
+            outer: 4.13,
+            color: "#1688ff",
+            opacity: 0.095,
+            scale: "1.05 0.7 1",
+          },
+        ].forEach((ring) => createCeilingRing(ceiling, { ...ring, className: "brand-ceiling-accent" }));
+
+        [
+          ["-3.4 4.42 -5.2", "3.4 4.42 -5.2", "#83d7ff", 0.14],
+          ["-3.4 4.42 5.2", "3.4 4.42 5.2", "#83d7ff", 0.14],
+          ["-3.4 4.42 -5.2", "-3.4 4.42 5.2", "#1688ff", 0.11],
+          ["3.4 4.42 -5.2", "3.4 4.42 5.2", "#1688ff", 0.11],
+          ["-2.9 4.72 -3.4", "2.9 4.72 3.4", "#bfe6ff", 0.09],
+          ["2.9 4.72 -3.4", "-2.9 4.72 3.4", "#65b7ff", 0.085],
+        ].forEach(([start, end, color, opacity]) =>
+          createCeilingLine(ceiling, { start, end, color, opacity }),
+        );
+
+        [
+          { x: -3.58, z: -3.4 },
+          { x: 3.58, z: -3.4 },
+          { x: -3.58, z: 3.4 },
+          { x: 3.58, z: 3.4 },
+        ].forEach((corner) => {
+          const drop = createCeilingBar(ceiling, {
+            position: `${corner.x} 3.64 ${corner.z}`,
+            width: 0.05,
+            height: 1.58,
+            depth: 0.05,
+            color: "#02050a",
+            emissive: "#83d7ff",
+            emissiveIntensity: 0.24,
+            opacity: 0.56,
+            className: "brand-ceiling-accent",
+          });
+          drop.dataset.baseEmissive = "0.24";
+        });
+
+        [
+          { position: "-3.84 4.12 -2.75", rotation: "0 90 0", from: "-3.84 4.12 -4.8", to: "-3.84 4.12 4.8" },
+          { position: "3.84 4.12 2.75", rotation: "0 -90 0", from: "3.84 4.12 4.8", to: "3.84 4.12 -4.8" },
+        ].forEach((sheen) => {
+          const plane = createCeilingPlane(ceiling, {
+            position: sheen.position,
+            rotation: sheen.rotation,
+            width: 0.05,
+            height: 2.8,
+            color: "#dceeff",
+            opacity: 0.026,
+            className: "brand-architectural-sheen",
+            animation: `property: position; from: ${sheen.from}; to: ${sheen.to}; dir: alternate; dur: 36000; easing: easeInOutSine; loop: true`,
+          });
+          plane.dataset.baseOpacity = "0.026";
+        });
+
+        brandRoot.appendChild(ceiling);
+      };
+
       window.addEventListener("DOMContentLoaded", () => {
         createSocialLinks();
         createNetworkLines();
@@ -2201,6 +2670,7 @@
         createDanceRoom();
         createLiveEventsRoom();
         createBrandWorkRoom();
+        createCeilingArchitecture();
       });
     </script>
   </head>
